@@ -66,4 +66,4 @@ Este projeto foi desenvolvido para rodar preferencialmente no **Google Colab**, 
 
 Desenvolvido como parte de atividades práticas de Big Data e Engenharia de Dados.
 
-* [Seu LinkedIn Aqui](Coloque o Link do seu perfil)
+* [https://www.linkedin.com/in/davi-ramos-ferreira-325354294/]
