@@ -57,7 +57,7 @@ Este projeto foi desenvolvido para rodar preferencialmente no **Google Colab**, 
 
 1.  Clone este repositório ou baixe o arquivo `.ipynb`.
 2.  Abra o [Google Colab](https://colab.research.google.com/).
-3.  Faça o upload do arquivo `analise_despesas_recife.ipynb`.
+3.  Faça o upload do arquivo `analise.ipynb`.
 4.  Execute todas as células (Runtime > Run all).
 
 ---
