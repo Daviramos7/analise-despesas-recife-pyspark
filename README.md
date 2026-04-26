@@ -100,6 +100,7 @@ Evita carregar os 127k registros brutos na memória do driver. O Spark faz toda 
 
 **Recomendado: Google Colab** (Java/Spark já disponíveis)
 
+<<<<<<< HEAD
 1. Clique no badge **Open in Colab** acima
 2. Execute todas as células: `Runtime > Run all`
 
@@ -112,6 +113,12 @@ pip install pyspark pandas matplotlib requests
 
 jupyter notebook analise.ipynb
 ```
+=======
+1.  Clone este repositório ou baixe o arquivo `.ipynb`.
+2.  Abra o [Google Colab](https://colab.research.google.com/).
+3.  Faça o upload do arquivo `analise.ipynb`.
+4.  Execute todas as células (Runtime > Run all).
+>>>>>>> 9213c5a85b10e3dd9f08f3326444a7cc58e47f74
 
 ---
 
