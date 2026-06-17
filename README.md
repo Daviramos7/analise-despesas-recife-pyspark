@@ -1,131 +1,380 @@
 # 🏛️ Análise de Despesas Públicas do Recife — PySpark
 
-> Pipeline ETL de Big Data para auditoria do orçamento municipal do Recife (2023), processando 127 mil registros com Apache Spark.
+> Pipeline ETL com Apache Spark para ingestão, tratamento e análise de despesas orçamentárias do Município do Recife em 2023.
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Daviramos7/analise-despesas-recife-pyspark/blob/main/analise.ipynb)
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white)
-![PySpark](https://img.shields.io/badge/PySpark-3.x-orange?style=for-the-badge&logo=apachespark&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge\&logo=python\&logoColor=white)
+![PySpark](https://img.shields.io/badge/PySpark-3.x-orange?style=for-the-badge\&logo=apachespark\&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge\&logo=pandas\&logoColor=white)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Concluído-success?style=for-the-badge)
 
 ---
 
-## ⚡ Performance
+## 📌 Sobre o projeto
 
-| Métrica | Resultado |
-|---|---|
-| Volume processado | **127.119 registros** |
-| Tempo de execução (Wall Clock) | **10,25 segundos** |
-| Tempo de CPU (Cluster) | **9,16 segundos** |
-| Shuffle de dados (rede) | **0,00 MB** |
-| Status | ✅ Paralelismo eficiente — CPU Time > Wall Clock |
+Este projeto implementa um pipeline de dados para analisar as despesas orçamentárias do Recife em 2023.
 
-> **0,00 MB de Shuffle** significa que toda a agregação foi resolvida localmente, sem tráfego de dados entre nós — otimização total de memória.
+O fluxo utiliza PySpark para processar o conjunto completo de dados e transfere para o Pandas apenas os resultados já agregados que serão utilizados na visualização.
 
----
+O pipeline executa automaticamente:
 
-## 📈 Resultados da Auditoria (2023)
-
-| # | Órgão | Destaque |
-|---|---|---|
-| 1 | Fundo Municipal de Saúde | **~R$ 1,66 bilhão** |
-| 2 | Secretaria de Educação | ~R$ 1,56 bilhão |
-| 3 | Infraestrutura Urbana | — |
-
-**Total auditado: ~R$ 7,8 bilhões**
-
-O orçamento é altamente concentrado nas áreas finalísticas (Saúde + Educação = ~42% do total), consistente com obrigações constitucionais do município.
+* download e validação do dataset;
+* detecção de respostas HTML inválidas;
+* detecção automática do separador do CSV;
+* normalização dos nomes das colunas;
+* limpeza de valores monetários brasileiros;
+* processamento e agregações com PySpark;
+* validações de qualidade dos dados;
+* ranking dos órgãos por valor liquidado;
+* geração de visualização em formato 16:9;
+* exportação dos resultados em CSV, JSON, PNG e ZIP.
 
 ---
 
-## 🏗️ Arquitetura do Pipeline
+## 📊 Resultados da análise
 
+Na execução com o dataset de 2023, foram encontrados:
+
+| Métrica                           |               Resultado |
+| --------------------------------- | ----------------------: |
+| Registros processados             |             **127.119** |
+| Valor liquidado                   | **R$ 7.803.361.234,91** |
+| Percentual pago sobre o liquidado |              **94,05%** |
+
+### Maiores órgãos por valor liquidado
+
+Entre os maiores valores identificados estão:
+
+|  # | Órgão                        |   Valor aproximado |
+| -: | ---------------------------- | -----------------: |
+|  1 | Secretaria de Saúde          | **R$ 1,67 bilhão** |
+|  2 | Secretaria de Educação       | **R$ 1,56 bilhão** |
+|  3 | Secretaria de Infraestrutura | **R$ 1,27 bilhão** |
+|  4 | Encargos Gerais do Município | **R$ 810 milhões** |
+
+Os valores são calculados diretamente a partir do dataset processado pelo pipeline.
+
+---
+
+## ⚡ Métricas de execução
+
+A aplicação apresenta ao final de cada execução:
+
+* quantidade de registros processados;
+* tempo real de processamento no Spark;
+* tamanho do arquivo de entrada;
+* quantidade de partições do DataFrame;
+* quantidade de órgãos ausentes;
+* quantidade de valores monetários inválidos;
+* versão do Apache Spark utilizada.
+
+> O tempo de execução pode variar de acordo com a máquina, disponibilidade do Google Colab, conexão com a internet e versão do Spark. Por isso, o projeto não utiliza um tempo fixo como resultado oficial.
+
+---
+
+## 🏗️ Arquitetura do pipeline
+
+```text
+Portal de Dados Abertos do Recife
+                 │
+                 ▼
+     Download com requests e retry
+                 │
+                 ├── Validação HTTP
+                 ├── Detecção de HTML
+                 ├── Validação do CSV
+                 └── Upload manual no Colab como fallback
+                 │
+                 ▼
+          Apache Spark
+                 │
+       ┌─────────┴─────────┐
+       │      EXTRACT      │
+       │                   │
+       │ spark.read.csv()  │
+       │ separador         │
+       │ detectado         │
+       │ automaticamente   │
+       └─────────┬─────────┘
+                 │
+                 ▼
+       ┌───────────────────┐
+       │     TRANSFORM     │
+       │                   │
+       │ normalização das  │
+       │ colunas           │
+       │                   │
+       │ limpeza de moeda  │
+       │ brasileira        │
+       │                   │
+       │ conversão para    │
+       │ DoubleType        │
+       │                   │
+       │ MEMORY_AND_DISK   │
+       └─────────┬─────────┘
+                 │
+                 ▼
+       ┌───────────────────┐
+       │     ANALYTICS     │
+       │                   │
+       │ totais financeiros│
+       │ validações        │
+       │ groupBy + sum     │
+       │ ranking Top 10    │
+       └─────────┬─────────┘
+                 │
+                 ▼
+       Pandas + Matplotlib
+                 │
+                 ▼
+         CSV · JSON · PNG · ZIP
 ```
-Portal de Dados Abertos do Recife (HTTP)
-              │
-              ▼
-     requests.get() → despesas_recife_2023.csv
-              │
-              ▼
-     SparkSession local[*] (2g driver memory)
-              │
-              ▼
-  ┌─────────── EXTRACT ───────────┐
-  │  spark.read.csv()             │
-  │  encoding=UTF-8, sep=";"      │
-  │  127.119 registros            │
-  └───────────────────────────────┘
-              │
-              ▼
-  ┌─────────── TRANSFORM ─────────┐
-  │  regexp_replace() — Regex     │
-  │  "1.000,00" → 1000.00         │
-  │  cast(DoubleType)             │
-  │  df.cache() — otimização      │
-  └───────────────────────────────┘
-              │
-              ▼
-  ┌─────────── ANALYTICS ─────────┐
-  │  agg(sum) — total liquidado   │
-  │  groupBy + orderBy + limit    │
-  │  toPandas() — só o Top 10     │
-  └───────────────────────────────┘
-              │
-              ▼
-     Matplotlib (barh) + Relatório
-     métricas extraídas via Spark UI API
-     (localhost:4040/api/v1/applications)
+
+---
+
+## 🛠️ Decisões técnicas
+
+### Validação do download
+
+O portal pode retornar uma página HTML, redirecionamento ou erro temporário no lugar do CSV.
+
+Antes de iniciar o processamento, o pipeline verifica:
+
+* status da resposta HTTP;
+* tipo do conteúdo retornado;
+* primeiros bytes do arquivo;
+* tamanho mínimo;
+* estrutura do cabeçalho;
+* presença de separadores válidos.
+
+Isso impede que uma página iniciada por `<!DOCTYPE html>` seja interpretada pelo Spark como um arquivo CSV.
+
+### Fallback de upload no Google Colab
+
+Caso o Portal de Dados Abertos recuse a conexão do Colab, o notebook abre automaticamente uma janela para envio manual do CSV.
+
+Depois do upload, o arquivo passa pelas mesmas validações e o pipeline continua normalmente.
+
+### Tratamento da moeda brasileira
+
+Os valores monetários do dataset podem utilizar o padrão brasileiro:
+
+```text
+1.234.567,89
 ```
 
+O pipeline:
+
+1. remove espaços e símbolos monetários;
+2. remove os pontos de milhar;
+3. substitui a vírgula decimal por ponto;
+4. converte o resultado para `DoubleType`.
+
+Exemplo:
+
+```text
+1.234.567,89 → 1234567.89
+```
+
+### Normalização das colunas
+
+Os nomes das colunas são convertidos para um padrão consistente:
+
+```text
+Valor Liquidado → valor_liquidado
+Órgão Nome → orgao_nome
+```
+
+Também são removidos:
+
+* acentos;
+* espaços;
+* caracteres especiais;
+* duplicações de separadores.
+
+Antes da análise, o código confirma a existência das colunas obrigatórias.
+
+### Persistência com `MEMORY_AND_DISK`
+
+O DataFrame transformado é persistido com:
+
+```python
+StorageLevel.MEMORY_AND_DISK
+```
+
+O Spark utiliza memória sempre que possível e pode utilizar disco caso o conjunto de dados não caiba completamente na memória disponível.
+
+### Conversão controlada para Pandas
+
+Os 127 mil registros não são enviados diretamente para o Pandas.
+
+O PySpark executa:
+
+* limpeza;
+* filtros;
+* agrupamentos;
+* somas;
+* ordenação;
+* seleção dos maiores órgãos.
+
+Somente o resultado agregado do Top 10 é convertido para Pandas para geração da visualização.
+
 ---
 
-## 🛠️ Decisões Técnicas
+## 📁 Arquivos gerados
 
-**Tratamento de moeda brasileira com Regex**
-O dataset usa formato `1.000,00` que o Spark lê como string. Solução: `regexp_replace` em duas passagens — remove o ponto de milhar, substitui vírgula decimal — antes do cast para `DoubleType`.
+Ao final da execução, o pipeline cria:
 
-**`df.cache()` antes das agregações**
-O DataFrame transformado é mantido em memória antes dos cálculos. Isso elimina releitura do CSV para cada operação — resultado direto: 0,00 MB de Shuffle.
+```text
+saida_auditoria_recife_2023/
+├── 04_dashboard_portfolio.png
+├── resumo_execucao.json
+└── top_10_orgaos_por_valor_liquidado.csv
+```
 
-**Métricas via Spark UI API**
-O pipeline extrai automaticamente CPU Time e Shuffle Bytes da API REST do Spark (`localhost:4040`) para gerar o relatório de performance, sem depender de estimativas manuais.
+Também é gerado um arquivo compactado:
 
-**`toPandas()` apenas no resultado agregado**
-Evita carregar os 127k registros brutos na memória do driver. O Spark faz toda a agregação distribuída e só traz o Top 10 para o Pandas — padrão de engenharia para workloads híbridos.
+```text
+saida_auditoria_recife_2023.zip
+```
+
+### Dashboard
+
+O arquivo:
+
+```text
+04_dashboard_portfolio.png
+```
+
+é gerado em proporção 16:9 e apresenta:
+
+* quantidade de registros processados;
+* valor total liquidado;
+* percentual pago sobre o liquidado;
+* maiores órgãos por valor liquidado.
 
 ---
 
-## 🚀 Como Executar
+## 🚀 Como executar
 
-**Recomendado: Google Colab** (Java/Spark já disponíveis)
+### Google Colab
 
-<<<<<<< HEAD
-1. Clique no badge **Open in Colab** acima
-2. Execute todas as células: `Runtime > Run all`
+1. Clique no badge **Open in Colab** no início deste README.
+2. No Colab, selecione:
 
-**Local:**
+```text
+Ambiente de execução → Executar tudo
+```
+
+3. Aguarde o download e o processamento do dataset.
+4. Caso o download automático falhe, selecione o CSV quando a janela de upload for exibida.
+5. Acesse a pasta de resultados:
+
+```text
+/content/saida_auditoria_recife_2023/
+```
+
+O notebook instala automaticamente as dependências ausentes.
+
+---
+
+### Execução local
+
+Clone o repositório:
+
 ```bash
-git clone https://github.com/Daviramos7/analise-despesas-recife-pyspark
+git clone https://github.com/Daviramos7/analise-despesas-recife-pyspark.git
 cd analise-despesas-recife-pyspark
+```
 
+Crie e ative um ambiente virtual:
+
+```bash
+python -m venv .venv
+```
+
+No Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+No Linux ou macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+Instale as dependências:
+
+```bash
 pip install pyspark pandas matplotlib requests
+```
 
+Execute o notebook:
+
+```bash
 jupyter notebook analise.ipynb
 ```
-=======
-1.  Clone este repositório ou baixe o arquivo `.ipynb`.
-2.  Abra o [Google Colab](https://colab.research.google.com/).
-3.  Faça o upload do arquivo `analise.ipynb`.
-4.  Execute todas as células (Runtime > Run all).
->>>>>>> 9213c5a85b10e3dd9f08f3326444a7cc58e47f74
+
+Ou execute a versão Python, caso ela esteja presente no repositório:
+
+```bash
+python recife_public_audit_2023.py
+```
+
+> Para execução local com PySpark, é necessário ter uma versão compatível do Java instalada.
+
+---
+
+## 🧰 Tecnologias utilizadas
+
+* Python
+* Apache Spark
+* PySpark
+* Spark SQL
+* Pandas
+* Matplotlib
+* Requests
+* Google Colab
+* Portal de Dados Abertos do Recife
+
+---
+
+## 📚 Conceitos aplicados
+
+* ETL;
+* processamento distribuído;
+* limpeza e normalização de dados;
+* tipagem de dados;
+* agregações;
+* persistência de DataFrames;
+* validação de qualidade;
+* tratamento de falhas de integração;
+* visualização de dados;
+* exportação de resultados;
+* processamento híbrido com Spark e Pandas.
+
+---
+
+## ⚠️ Observações
+
+* Os dados utilizados são públicos e disponibilizados pelo Portal de Dados Abertos da Prefeitura do Recife.
+* Os resultados representam o processamento do dataset de despesas orçamentárias de 2023.
+* O tempo de execução pode variar entre ambientes.
+* A indisponibilidade temporária do portal não representa falha do pipeline.
+* O notebook possui fallback para upload manual do dataset no Google Colab.
 
 ---
 
 ## 📄 Licença
 
-Copyright © 2026 por Davi Ramos Ferreira. Todos os Direitos Reservados.
+Copyright © 2026 Davi Ramos Ferreira.
+
+Todos os direitos reservados.
 
 ---
 
-**Desenvolvido com 💙 por [Davi Ramos Ferreira](https://github.com/Daviramos7)**
+Desenvolvido por [Davi Ramos Ferreira](https://github.com/Daviramos7)
