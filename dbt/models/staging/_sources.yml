@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Camada limpa carregada pelo job PySpark (src/despesas/carga.py)
+    tables:
+      - name: despesas
+        description: Uma linha por movimento mensal de subempenho numa unidade orçamentária

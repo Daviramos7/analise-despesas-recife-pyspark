@@ -1,0 +1,12 @@
+despesas_recife:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('PGHOST', 'localhost') }}"
+      port: "{{ env_var('PGPORT', '5432') | int }}"
+      user: "{{ env_var('PGUSER', 'despesas') }}"
+      password: "{{ env_var('PGPASSWORD', 'despesas') }}"
+      dbname: "{{ env_var('PGDATABASE', 'despesas') }}"
+      schema: public
+      threads: 4

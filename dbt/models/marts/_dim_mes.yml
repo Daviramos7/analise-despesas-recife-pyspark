@@ -1,0 +1,86 @@
+
+version: 2
+
+models:
+  - name: dim_mes
+    description: >
+      Dimensão temporal no grão de mês.
+      Possui uma linha por mês presente em stg_despesas,
+      permitindo análises de despesas por mês, trimestre,
+      semestre e ano.
+
+    columns:
+      - name: sk_mes
+        description: >
+          Chave substituta da dimensão no formato AAAAMM.
+          Exemplo: 202305.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: data_inicio_mes
+        description: >
+          Primeiro dia do mês de referência, armazenado
+          como tipo date.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: ano
+        description: Ano de referência com quatro dígitos.
+        data_tests:
+          - not_null
+
+      - name: mes
+        description: Número do mês, variando de 1 a 12.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+      - name: trimestre
+        description: Trimestre do ano, variando de 1 a 4.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+
+      - name: semestre
+        description: Semestre do ano, variando de 1 a 2.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2]
+
+      - name: nome_mes
+        description: >
+          Nome completo do mês em português,
+          com inicial maiúscula. Exemplo: Janeiro.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Janeiro
+                  - Fevereiro
+                  - Março
+                  - Abril
+                  - Maio
+                  - Junho
+                  - Julho
+                  - Agosto
+                  - Setembro
+                  - Outubro
+                  - Novembro
+                  - Dezembro
+
+      - name: ano_mes
+        description: >
+          Identificador textual do mês no formato AAAA-MM.
+          Exemplo: 2023-05.
+        data_tests:
+          - unique
+          - not_null
