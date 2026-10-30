@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: dim_fonte_recurso
+    description: >
+      Fonte de recurso que financia a despesa (ex. "OUTROS RECURSOS NÃO VINCULADOS").
+      Uma linha por código de fonte.
+    columns:
+      - name: sk_fonte_recurso
+        description: >
+          Chave substituta inteira, sem significado de negócio.
+          Gerada com row_number() ordenado pelo código, para ser determinística.
+        data_tests: [unique, not_null]
+      - name: fonte_recurso_codigo
+        description: Chave natural (código oficial da fonte)
+        data_tests: [unique, not_null]
+      - name: fonte_recurso_nome
+        data_tests: [not_null]
