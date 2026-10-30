@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: fato_despesa_movimento
+    description: >
+      Movimento mensal de cada subempenho por unidade orçamentária.
+      Medidas são fluxos do mês; valores negativos representam anulações/estornos.
+    data_tests:
+      - unique_combinacao:
+          arguments:
+            colunas: [sk_unidade, empenho_numero, subempenho, sk_mes]
+    columns:
+      - name: sk_unidade
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_unidade')", field: sk_unidade}
+      - name: sk_credor
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_credor')", field: sk_credor}
+      - name: sk_mes
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_mes')", field: sk_mes}
+      - name: sk_classif_economica
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_classif_economica')", field: sk_classif_economica}
+      - name: sk_classif_funcional
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_classif_funcional')", field: sk_classif_funcional}
+      - name: sk_fonte_recurso
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_fonte_recurso')", field: sk_fonte_recurso}
+      - name: valor_empenhado
+        data_tests: [not_null]
+      - name: valor_liquidado
+        data_tests: [not_null]
+      - name: valor_pago
+        data_tests: [not_null]

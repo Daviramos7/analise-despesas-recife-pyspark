@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: dim_unidade
+    description: Unidade orçamentária, com o órgão como atributo hierárquico
+    columns:
+      - name: sk_unidade
+        data_tests: [unique, not_null]
+      - name: unidade_codigo
+        data_tests: [unique, not_null]
+      - name: orgao_codigo
+        data_tests: [not_null]
+
+  - name: dim_credor
+    description: Credor da despesa; código '0' = não informado (folha de pessoal)
+    columns:
+      - name: sk_credor
+        data_tests: [unique, not_null]
+      - name: credor_codigo
+        data_tests: [unique, not_null]
+      - name: credor_informado
+        data_tests: [not_null]
+
+  - name: dim_classif_economica
+    description: >
+      Classificação econômica achatada. Grão = caminho completo dos 5 códigos;
+      o mesmo subelemento tem significados diferentes em caminhos diferentes.
+    data_tests:
+      - unique_combinacao:
+          arguments:
+            colunas: [categoria_economica_codigo, grupo_despesa_codigo, modalidade_aplicacao_codigo,
+                      elemento_codigo, subelemento_codigo]
+    columns:
+      - name: sk_classif_economica
+        data_tests: [unique, not_null]
+
+  - name: dim_classif_funcional
+    description: Classificação funcional-programática (função > subfunção > programa > ação)
+    data_tests:
+      - unique_combinacao:
+          arguments:
+            colunas: [funcao_codigo, subfuncao_codigo, programa_codigo, acao_codigo]
+    columns:
+      - name: sk_classif_funcional
+        data_tests: [unique, not_null]

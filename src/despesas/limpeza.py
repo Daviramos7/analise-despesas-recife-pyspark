@@ -5,8 +5,11 @@ Regras levantadas no profiling do CSV de 2023 (127.119 linhas):
 - alguns campos numéricos chegam com espaço à esquerda (" 2023", " 12");
 - valores no formato brasileiro ("1.234,56"), podendo ser NEGATIVOS
   (anulação/estorno: é dado legítimo, NÃO filtrar);
-- o mesmo código pode aparecer com nomes diferentes
-  (ex.: elemento 37 = "LOCAÇÃO DE MÃO-DE-OBRA" e "LOCAÇÃO DE MÃO DE OBRA").
+- nomes da classificação econômica dependem do CAMINHO COMPLETO
+  (categoria.grupo.modalidade.elemento.subelemento), não do código isolado.
+  Ex.: elemento 13 = "OBRIGAÇÕES PATRONAIS" na modalidade 90 e
+  "CONTRIBUIÇÕES PATRONAIS" na modalidade 91. Por isso NÃO canonizamos aqui;
+  a unicidade nome-por-caminho é garantida por teste no dbt (dim_classif_economica).
 """
 from pyspark.sql import Column, DataFrame, Window
 from pyspark.sql import functions as F
@@ -21,10 +24,10 @@ COLUNAS_INTEIRAS = [
 ]
 COLUNAS_VALOR = ["valor_empenhado", "valor_liquidado", "valor_pago"]
 
-# (coluna de código, coluna de nome) que precisam de nome canônico
-PARES_CODIGO_NOME = [
-    ("elemento_codigo", "elemento_nome"),
-]
+# (coluna de código, coluna de nome) que precisam de nome canônico.
+# Vazio de propósito: o profiling por código isolado indicou conflitos que, na
+# verdade, eram caminhos diferentes da hierarquia (ver docstring do módulo).
+PARES_CODIGO_NOME: list[tuple[str, str]] = []
 
 
 def valor_br_para_decimal(coluna: Column) -> Column:
