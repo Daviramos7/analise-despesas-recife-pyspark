@@ -1,0 +1,13 @@
+data/
+*.parquet
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+spark-warehouse/
+metastore_db/
+derby.log
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+.env
