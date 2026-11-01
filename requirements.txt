@@ -7,3 +7,5 @@ uvicorn==0.32.1
 httpx==0.28.1
 openai==1.58.1
 pyyaml==6.0.2
+streamlit==1.40.2
+plotly==5.24.1

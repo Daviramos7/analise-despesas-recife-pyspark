@@ -194,8 +194,11 @@ def normalizar_frase(txt: str) -> str:
     return " ".join(txt.lower().split())
 
 
-def criar_agente_padrao() -> Agente:
-    """Agente configurado por variável de ambiente. Nenhuma chave no código."""
+def criar_agente_padrao(cliente_api=None) -> Agente:
+    """Agente configurado por variável de ambiente. Nenhuma chave no código.
+
+    cliente_api: opcional; ex. TestClient(app) para chamar a API no mesmo processo.
+    """
     from openai import OpenAI
 
     from orcamento.agente.ferramentas import ExecutorHTTP, gerar_ferramentas
@@ -214,6 +217,6 @@ def criar_agente_padrao() -> Agente:
         cliente=cliente,
         modelo=os.getenv("LLM_MODEL", "qwen2.5:7b"),
         ferramentas_schema=[f.schema for f in ferramentas],
-        executar=ExecutorHTTP(ferramentas),
+        executar=ExecutorHTTP(ferramentas, cliente=cliente_api),
         prompt_versao=os.getenv("PROMPT_VERSAO", PROMPT_PADRAO),
     )

@@ -40,3 +40,20 @@ def test_registra_e_exporta_so_negativos(tmp_path):
 
     with psycopg.connect(dsn()) as c:
         c.execute("delete from app.interacoes where id in (%s, %s)", (id_boa, id_ruim))
+
+
+def test_voto_posterior_atualiza_interacao():
+    try:
+        psycopg.connect(dsn(), connect_timeout=3).close()
+    except psycopg.OperationalError as e:
+        pytest.skip(f"Postgres indisponível: {e}")
+    from orcamento.feedback import votar
+    resp = RespostaAgente("p?", "r", [], modelo="t")
+    id_ = registrar(resp)  # sem voto ainda (como no app: resposta aparece antes do voto)
+    votar(id_, -1, "errado")
+    with psycopg.connect(dsn()) as c:
+        assert c.execute("select avaliacao, comentario from app.interacoes where id=%s",
+                         (id_,)).fetchone() == (-1, "errado")
+        c.execute("delete from app.interacoes where id=%s", (id_,))
+    with pytest.raises(ValueError):
+        votar(id_, 0)

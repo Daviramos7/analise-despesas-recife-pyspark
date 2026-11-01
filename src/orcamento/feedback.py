@@ -26,7 +26,14 @@ create table if not exists app.interacoes (
 
 
 def garantir_tabela(conn: psycopg.Connection) -> None:
-    conn.execute(DDL)
+    """Cria a tabela só se ela não existir.
+
+    No app online o usuário do banco é restrito (sem CREATE), então nem tentamos DDL quando
+    a tabela já está lá: o Postgres checa permissão antes de avaliar o IF NOT EXISTS.
+    """
+    existe = conn.execute("select to_regclass('app.interacoes') is not null").fetchone()[0]
+    if not existe:
+        conn.execute(DDL)
 
 
 def registrar(resp: RespostaAgente, avaliacao: int | None = None,
@@ -46,6 +53,22 @@ def registrar(resp: RespostaAgente, avaliacao: int | None = None,
         ).fetchone()
         conn.commit()
         return linha[0]
+    finally:
+        if proprio:
+            conn.close()
+
+
+def votar(id_interacao: int, avaliacao: int, comentario: str | None = None,
+          conn: psycopg.Connection | None = None) -> None:
+    """Registra 👍 (1) / 👎 (-1) numa interação já gravada (o voto vem depois da resposta)."""
+    if avaliacao not in (-1, 1):
+        raise ValueError("avaliacao deve ser -1 ou 1")
+    proprio = conn is None
+    conn = conn or psycopg.connect(dsn())
+    try:
+        conn.execute("update app.interacoes set avaliacao = %s, comentario = %s where id = %s",
+                     (avaliacao, comentario, id_interacao))
+        conn.commit()
     finally:
         if proprio:
             conn.close()

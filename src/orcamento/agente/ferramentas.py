@@ -68,9 +68,14 @@ def _resolver(openapi: dict, esquema: dict) -> dict:
 class ExecutorHTTP:
     """Executa uma tool chamando a API de verdade."""
 
-    def __init__(self, ferramentas: list[Ferramenta], base_url: str | None = None):
+    def __init__(self, ferramentas: list[Ferramenta], base_url: str | None = None, cliente=None):
+        """cliente: qualquer objeto com .get(caminho, params=...) -> resposta httpx.
+
+        Padrão: HTTP de verdade (API_URL). No app online, passa-se um TestClient(app) para
+        chamar a MESMA API dentro do processo, sem hospedar um servidor separado.
+        """
         self._por_nome = {f.nome: f for f in ferramentas}
-        self._http = httpx.Client(
+        self._http = cliente or httpx.Client(
             base_url=base_url or os.getenv("API_URL", "http://localhost:8000"), timeout=30
         )
 

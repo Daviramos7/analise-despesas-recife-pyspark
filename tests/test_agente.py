@@ -164,3 +164,21 @@ def test_descricao_do_comparativo_desaconselha_uso_para_totais():
     fs = {f.nome: f for f in gerar_ferramentas(app.openapi())}
     desc = fs["comparativo_receita_despesa"].schema["function"]["description"]
     assert "NÃO use para" in desc and "intraorçamentárias" in desc
+
+
+def test_executor_in_process_chama_a_mesma_api():
+    from fastapi.testclient import TestClient
+
+    from orcamento.agente.ferramentas import ExecutorHTTP
+
+    fs = gerar_ferramentas(app.openapi())
+    chamados = []
+
+    class ClienteFalso:  # mesma interface do TestClient/httpx
+        def get(self, caminho, params=None):
+            chamados.append((caminho, params))
+            return NS(status_code=200, text='{"ok": true}')
+
+    ok, texto = ExecutorHTTP(fs, cliente=ClienteFalso())("despesas_orgaos", {"medida": "pago"})
+    assert ok and chamados == [("/despesas/orgaos", {"medida": "pago"})]
+    assert isinstance(TestClient(app), object)  # TestClient é aceito como cliente

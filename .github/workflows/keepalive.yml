@@ -1,0 +1,19 @@
+name: keepalive-supabase
+
+# O plano gratuito do Supabase pausa o projeto após 7 dias sem atividade.
+# Uma consulta leve a cada 3 dias mantém o app online acordado.
+on:
+  schedule:
+    - cron: "17 11 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consulta leve no banco (usuário somente leitura)
+        env:
+          URL: ${{ secrets.SUPABASE_KEEPALIVE_URL }}
+        run: |
+          if [ -z "$URL" ]; then echo "Secret SUPABASE_KEEPALIVE_URL não configurado"; exit 1; fi
+          psql "$URL" -tAc "select count(*) from marts.dim_mes"

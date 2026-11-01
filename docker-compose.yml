@@ -1,11 +1,13 @@
 name: orcamento-publico-recife
 
 x-postgres-env: &pg
-  PGHOST: postgres
-  PGPORT: "5432"
-  PGDATABASE: despesas
-  PGUSER: despesas
-  PGPASSWORD: despesas
+  # Padrão: Postgres local do compose. Para carregar no Supabase:
+  #   docker compose --env-file .env.supabase run --rm --no-deps pipeline   (e depois: dbt)
+  PGHOST: ${PGHOST:-postgres}
+  PGPORT: ${PGPORT:-5432}
+  PGDATABASE: ${PGDATABASE:-despesas}
+  PGUSER: ${PGUSER:-despesas}
+  PGPASSWORD: ${PGPASSWORD:-despesas}
 
 x-llm-env: &llm
   API_URL: http://api:8000
@@ -66,6 +68,20 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+
+  app:                 # docker compose up app  ->  http://localhost:8501
+    build: .
+    command: ["streamlit", "run", "app/streamlit_app.py", "--server.port", "8501",
+              "--server.address", "0.0.0.0"]
+    depends_on:
+      dbt:
+        condition: service_completed_successfully
+    environment:
+      <<: [*pg, *llm]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8501:8501"
 
   agente:              # docker compose run --rm agente
     build: .

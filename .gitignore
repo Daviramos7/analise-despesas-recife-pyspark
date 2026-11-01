@@ -13,3 +13,7 @@ dbt/dbt_packages/
 .env
 dbt/.user.yml
 evals/candidatos.yaml
+.env.*
+!.env.example
+!.env.supabase.example
+.streamlit/secrets.toml

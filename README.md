@@ -115,6 +115,27 @@ Edite o `.env` e deixe **só uma** opção descomentada: 1 = Ollama (padrão), 2
 | Mudou código da API e nada mudou | o container da API é antigo | `docker compose up -d --build --no-deps api` |
 | Quer começar do zero | volume do Postgres com dados antigos | `docker compose down -v` |
 
+## 🌐 App online (Streamlit)
+
+Painel com os números do orçamento e um chat com o agente, que mostra **quais consultas à API
+fez** e se **todos os números foram conferidos**. Tudo em planos gratuitos:
+
+```text
+Visitante ─► Streamlit Community Cloud ── app + API FastAPI + agente (no mesmo processo)
+                 ├─► Supabase (Postgres): marts + feedback 👍/👎   [usuário app_web: só leitura + feedback]
+                 └─► Google Gemini (gemini-3.5-flash-lite, plano gratuito)
+```
+
+- **O app é só mais um cliente da API.** O painel e o agente chamam os mesmos endpoints
+  (via `TestClient`, sem servidor separado), então os números da tela são os que os evals avaliam.
+- **Segurança:** o app usa o usuário `app_web`, que só lê os marts e só grava feedback.
+  Ver [`deploy/supabase_setup.sql`](deploy/supabase_setup.sql).
+- **Limites do plano gratuito:** 15 perguntas por sessão; o Streamlit dorme após 12 h sem
+  visita (acorda num clique, ~30 s); o Supabase pausaria após 7 dias, e o workflow
+  [`keepalive.yml`](.github/workflows/keepalive.yml) evita isso. Se o Gemini estiver
+  sobrecarregado (HTTP 503), o app avisa em vez de travar.
+- **Rodar o app local:** `docker compose up --build app` → <http://localhost:8501>
+
 ## 🔌 API
 
 | Endpoint | Responde |
