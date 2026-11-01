@@ -1,5 +1,7 @@
 # 🏛️ Receitas e Despesas Públicas do Recife: dados prontos para agentes de IA
 
+[![ci](https://github.com/Daviramos7/analise-despesas-recife-pyspark/actions/workflows/ci.yml/badge.svg)](https://github.com/Daviramos7/analise-despesas-recife-pyspark/actions/workflows/ci.yml)
+
 Pipeline de dados (PySpark + dbt + PostgreSQL), uma **API FastAPI** desenhada para ser lida por
 um LLM e um **agente com tool calling** que responde perguntas em português sobre o orçamento do
 Recife em 2023. O agente cita só números que vieram da API, e isso é **medido por evals**.
