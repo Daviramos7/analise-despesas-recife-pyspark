@@ -19,6 +19,14 @@ O conjunto de casos é **o mesmo** em todas as rodadas, com uma exceção regist
 | 4 | `ano` **fora** das tools + `anos_dos_dados` em toda resposta | v1 | 3 | 96,7% (96,7–96,7) | 0 | `20261101-1424_*` |
 | 5 | + guardrail determinístico de ano | v1 | 3 | **100% (LLM sozinho: 96,7%)** | 0 | `20261101-1429_*` |
 
+### Modelo na nuvem (Gemini) e ajuste do comparativo
+
+| # | Modelo | Mudança | Rep. | Acerto | Sem guardrail | Sem suporte | Arquivo |
+|---|---|---|---:|---:|---:|---:|---|
+| 6 | gemini-3.5-flash-lite | 1ª rodada no Gemini (+ repasse da assinatura de raciocínio) | 1 | 93,3% | 93,3% | 0 | `20261101-1520_*` |
+| 7 | gemini-3.5-flash-lite | descrição do `comparativo` avisa que os totais excluem intraorçamentárias | 1 | **100%** | **100%** | 0 | `20261101-1527_*` |
+| 8 | qwen2.5:7b | mesma API da rodada 7 (checagem de regressão) | 1 | 96,7% | 93,3% | 0 | `20261101-1528_*` |
+
 ¹ Antes do versionamento de prompt, o JSON não registra a versão. O texto usado é o que hoje é o `v2`.
 
 ### O que cada rodada ensinou
@@ -37,8 +45,23 @@ O conjunto de casos é **o mesmo** em todas as rodadas, com uma exceção regist
   `anos_dos_dados` devolvidos pelas tools, a resposta vira "Não tenho esse dado". O relatório
   separa o acerto com e sem guardrail.
 
+- **6:** o Gemini errou 2 totais por usar `comparativo_receita_despesa`, que por padrão exclui
+  operações intraorçamentárias e devolve valores menores. O número existia na API (0 sem
+  suporte), mas o significado era outro, e a descrição da tool não avisava disso. Não foi
+  alucinação: foi ambiguidade da API.
+- **7:** a descrição passou a dizer "NÃO use para totais", e a resposta ganhou o campo
+  `observacao`. O Gemini foi a 100% sem precisar do guardrail, e recusou 2022 sozinho.
+- **8:** a mesma mudança custou 1 caso no qwen. Ele voltou a pedir "qual órgão?" em vez de
+  consultar o total de março, e o erro acontece no primeiro turno, antes de qualquer tool. A
+  decisão foi **aceitar o trade-off**: o Gemini é o modelo do app online, e seguir ajustando
+  descrições contra os mesmos 30 casos seria otimizar para a prova.
+- Em `20261101-1512_*` houve um HTTP 503 de sobrecarga do `gemini-3.8-flash`. O arquivo foi
+  descartado por ser falha do provedor, não avaliação. Por isso o modelo usado é o Flash-Lite.
+
 ### Limites destes números
 
+- As rodadas 6 a 8 têm **uma repetição só**. O Gemini na nuvem pode variar mais que o modelo
+  local, e as 3 repetições ficaram pendentes por causa da cota diária gratuita.
 - 30 casos escritos pelo próprio autor. O guardrail foi criado **depois** de ver o caso de 2022
   falhar, então esse caso não mede generalização. Casos novos devem vir do loop de feedback
   (`python -m orcamento.feedback`).

@@ -149,3 +149,10 @@ def test_ranking_credores_busca_por_nome_sem_acento(cliente):
     "/comparativo/receita-despesa"])
 def test_toda_resposta_diz_de_que_ano_sao_os_dados(cliente, rota):
     assert cliente.get(rota).json()["anos_dos_dados"] == [2023]
+
+
+def test_comparativo_avisa_que_nao_sao_totais(cliente):
+    sem = cliente.get("/comparativo/receita-despesa").json()
+    assert "SEM" in sem["observacao"] and "não são os totais" in sem["observacao"]
+    com = cliente.get("/comparativo/receita-despesa", params={"excluir_intraorcamentarias": False}).json()
+    assert "COM" in com["observacao"]

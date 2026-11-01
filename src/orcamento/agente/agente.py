@@ -88,6 +88,28 @@ class RespostaAgente:
 Executor = Callable[[str, dict[str, Any]], tuple[bool, str]]
 
 
+def _mensagem_assistente(msg, chamadas) -> dict[str, Any]:
+    """Devolve ao LLM a mensagem dele EXATAMENTE como veio, com campos desconhecidos inclusos.
+
+    Modelos com raciocínio (ex.: Gemini 3) anexam uma assinatura do pensamento às tool calls
+    (no modo compatível com OpenAI, em tool_calls[].extra_content). Se ela não volta no turno
+    seguinte, a API responde 400. Reconstruir a mensagem campo a campo perdia essa assinatura.
+    """
+    if hasattr(msg, "model_dump"):
+        dados = msg.model_dump(exclude_none=True)
+        dados["content"] = dados.get("content") or ""
+        return dados
+    return {  # fallback para objetos simples (testes)
+        "role": "assistant",
+        "content": msg.content or "",
+        "tool_calls": [
+            {"id": c.id, "type": "function",
+             "function": {"name": c.function.name, "arguments": c.function.arguments}}
+            for c in chamadas
+        ],
+    }
+
+
 class Agente:
     def __init__(self, cliente, modelo: str, ferramentas_schema: list[dict], executar: Executor,
                  prompt_versao: str = PROMPT_PADRAO):
@@ -120,15 +142,7 @@ class Agente:
                 resposta.texto = (msg.content or "").strip()
                 return aplicar_guardrail_ano(resposta)
 
-            mensagens.append({
-                "role": "assistant",
-                "content": msg.content or "",
-                "tool_calls": [
-                    {"id": c.id, "type": "function",
-                     "function": {"name": c.function.name, "arguments": c.function.arguments}}
-                    for c in chamadas
-                ],
-            })
+            mensagens.append(_mensagem_assistente(msg, chamadas))
             for c in chamadas:
                 try:
                     args = json.loads(c.function.arguments or "{}")
@@ -191,6 +205,10 @@ def criar_agente_padrao() -> Agente:
     cliente = OpenAI(
         base_url=os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
         api_key=os.getenv("LLM_API_KEY", "ollama"),  # Ollama ignora; Groq/OpenAI exigem
+        # Planos gratuitos (ex.: Groq 8k tokens/min) devolvem 429. O SDK reespera respeitando o
+        # header retry-after; com várias tentativas a rodada fica lenta, mas não quebra.
+        max_retries=int(os.getenv("LLM_MAX_RETRIES", "8")),
+        timeout=float(os.getenv("LLM_TIMEOUT_S", "120")),
     )
     return Agente(
         cliente=cliente,

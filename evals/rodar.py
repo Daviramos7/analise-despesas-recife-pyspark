@@ -39,6 +39,8 @@ def main() -> int:
     ap.add_argument("--so", nargs="*", help="ids de casos a rodar")
     ap.add_argument("--gabarito", action="store_true", help="só mostra os gabaritos")
     ap.add_argument("--repeticoes", type=int, default=1, help="rodadas completas (variância)")
+    ap.add_argument("--pausa", type=float, default=0.0,
+                    help="segundos entre perguntas (útil em plano gratuito com limite por minuto)")
     args = ap.parse_args()
 
     casos = [c for c in carregar_casos() if not args.so or c["id"] in args.so]
@@ -62,6 +64,8 @@ def main() -> int:
                 r = avaliar(c, RespostaAgente(c["pergunta"], ""), gabaritos[c["id"]])
                 r.erro = f"{type(e).__name__}: {e}"
             resultados.append(r)
+            if args.pausa:
+                time.sleep(args.pausa)
             marca = "✅" if r.acerto else "❌"
             alerta = f"  ⚠️ sem suporte: {r.numeros_sem_suporte}" if r.numeros_sem_suporte else ""
             print(f"{marca} {r.id:30} tools={r.ferramentas_chamadas}{alerta}", flush=True)
@@ -76,6 +80,7 @@ def main() -> int:
         "modelo": agente.modelo,
         "prompt_versao": agente.prompt_versao,
         "llm_base_url": os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
+        "pausa_s": args.pausa,
         "data_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "casos": len(casos),
     }

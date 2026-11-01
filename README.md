@@ -6,8 +6,8 @@ Pipeline de dados (PySpark + dbt + PostgreSQL), uma **API FastAPI** desenhada pa
 um LLM e um **agente com tool calling** que responde perguntas em português sobre o orçamento do
 Recife em 2023. O agente cita só números que vieram da API, e isso é **medido por evals**.
 
-> **Status:** funcionando de ponta a ponta. Agente com `qwen2.5:7b` local: **96,7% de acerto
-> do LLM sozinho e 100% com guardrail** em 30 casos, sem nenhum número inventado.
+> **Status:** funcionando de ponta a ponta. Em 30 casos de avaliação: **Gemini Flash-Lite (nuvem,
+> grátis) 100%** e **qwen2.5:7b (local) 96,7%**, sem nenhum número inventado.
 > [Detalhes e limites](#-resultados-dos-evals).
 
 ---
@@ -43,7 +43,7 @@ Portal de Dados Abertos (CSV despesas + receitas 2023)
         │  OpenAPI
         ▼
  Agente  tools geradas do OpenAPI · loop de tool calling no SDK openai · temperatura 0
-        │        ├─► Ollama (local, grátis)  ou  Groq / OpenAI (por variável de ambiente)
+        │        ├─► Ollama (local) ou Gemini / Groq / OpenAI (por variável de ambiente)
         │        └─► checagem de grounding: todo número citado precisa estar na saída de uma tool
         ▼
  Evals (30 casos, gabarito via SQL direto no raw)   ·   Feedback 👍/👎 → app.interacoes
@@ -56,7 +56,8 @@ Portal de Dados Abertos (CSV despesas + receitas 2023)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/), instalado e **aberto**.
 - Para o agente, uma das opções:
   - **[Ollama](https://ollama.com/download)** (grátis, local; GPU recomendada): `ollama pull qwen2.5:7b`
-  - **Groq** (grátis, na nuvem, sem GPU): chave em [console.groq.com](https://console.groq.com)
+  - **Google Gemini** (grátis, na nuvem, sem GPU, sem cartão): chave em [aistudio.google.com](https://aistudio.google.com)
+  - **Groq** (grátis, na nuvem): chave em [console.groq.com](https://console.groq.com)
 
 ### 2. Código e dados
 
@@ -101,7 +102,7 @@ uns 2 a 3 minutos. Está pronto quando aparecer `Uvicorn running on http://0.0.0
 cp .env.example .env     # no Windows: copy .env.example .env
 ```
 
-Edite o `.env`: o padrão é Ollama, e para usar Groq basta descomentar a opção 2 e colar a chave.
+Edite o `.env` e deixe **só uma** opção descomentada: 1 = Ollama (padrão), 2 = Gemini, 3 = Groq.
 **O `.env` está no `.gitignore`, então a chave nunca vai pro repositório.**
 
 ### Problemas comuns
@@ -135,7 +136,7 @@ Medidas de despesa são whitelisted (`empenhado | liquidado | pago`) e injetadas
 ## 🤖 Agente
 
 - **Sem framework.** O loop inteiro está em [`src/orcamento/agente/agente.py`](src/orcamento/agente/agente.py)
-  e usa o SDK `openai` apontando pra qualquer endpoint compatível (Ollama, Groq, OpenAI).
+  e usa o SDK `openai` apontando pra qualquer endpoint compatível (Ollama, Gemini, Groq, OpenAI).
 - **Tools geradas do OpenAPI** da própria API. A descrição que o LLM lê é a mesma do `/docs`,
   então existe uma fonte de contrato só.
 - **Regras no prompt (versionado: `PROMPT_VERSAO`):** só citar números das tools, nunca calcular
@@ -162,22 +163,23 @@ e **4 que o agente deve recusar** (outro ano, bairro, salário individual, valor
 
 ## 📊 Resultados dos evals
 
-`qwen2.5:7b` local (Ollama, RTX 3060), temperatura 0, 30 casos, 3 repetições:
+Mesmos 30 casos, temperatura 0, mesma API (versão atual):
 
-| Métrica | Resultado |
-|---|---:|
-| Acerto (agente completo, com guardrail) | **100%** (30/30 nas 3 rodadas) |
-| Acerto do LLM sozinho (sem guardrail) | **96,7%** |
-| Tool correta | 100% |
-| Respostas com número sem suporte nas tools | 0 |
-| Tempo por rodada (30 perguntas) | ~53 s |
+| Modelo | Onde roda | Rep. | Acerto | LLM sem guardrail | Tool correta | Nº sem suporte |
+|---|---|---:|---:|---:|---:|---:|
+| `gemini-3.5-flash-lite` | nuvem, plano gratuito | 1 | **100%** | **100%** | 100% | 0 |
+| `qwen2.5:7b` | local (Ollama, RTX 3060) | 1 | **96,7%** | 93,3% | 96,7% | 0 |
 
-O caminho até aqui passou por uma **regressão para 76,7%**, causada por expor um parâmetro `ano`
-nas tools, e por um A/B de prompt que mostrou que o prompt não era a causa. Está tudo em
-[`evals/README.md`](evals/README.md), com os JSONs de cada rodada em `evals/resultados/`.
+Em nenhuma rodada o agente citou número que não veio da API.
 
-> Esses números valem para **estes 30 casos**, escritos pelo autor. O guardrail de ano foi
-> criado depois de ver um caso falhar. Não é uma medida de confiabilidade geral.
+O caminho até aqui inclui uma **regressão para 76,7%** (causada por expor o parâmetro `ano` nas
+tools), um A/B de prompt, um guardrail determinístico e um **trade-off aceito**: a correção que
+levou o Gemini a 100% custou 1 caso no qwen. Está tudo em [`evals/README.md`](evals/README.md),
+com o JSON de cada rodada em `evals/resultados/`.
+
+> Esses números valem para **estes 30 casos**, escritos pelo autor, e várias correções foram
+> feitas depois de ver o erro. Não é uma medida de confiabilidade geral. As rodadas finais têm
+> uma repetição só.
 
 ## 🔁 Feedback
 

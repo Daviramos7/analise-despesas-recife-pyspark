@@ -317,8 +317,11 @@ def comparativo_receita_despesa(
         "e despesa no outro). Padrão: true, para não contar o mesmo valor duas vezes."))] = True,
     ano: AnoQ = None,
 ) -> ComparativoReceitaDespesa:
-    """Responde: 'a prefeitura arrecadou mais do que gastou?', 'qual foi o saldo', 'em que
-    meses a despesa superou a receita'."""
+    """Responde SÓ comparações: 'a prefeitura arrecadou mais do que gastou?', 'qual foi o
+    saldo', 'em que meses a despesa superou a receita'. ATENÇÃO: por padrão exclui operações
+    intraorçamentárias, então receita e despesa aqui são MENORES que os totais da prefeitura.
+    NÃO use para 'quanto foi gasto/empenhado/arrecadado' (use despesas_orgaos ou
+    receitas_origens)."""
     _exige_receitas(conn)
     _validar_ano(conn, ano)
     _validar_periodo(mes_inicio, mes_fim)
@@ -332,4 +335,7 @@ def comparativo_receita_despesa(
         anos_dos_dados=[ano] if ano else _anos(conn), medida_despesa=medida_despesa, mes_inicio=mes_inicio, mes_fim=mes_fim,
         excluir_intraorcamentarias=excluir_intraorcamentarias,
         receita_arrecadada=receita, despesa=despesa, saldo=receita - despesa, meses=meses,
+        observacao=("Valores SEM operações intraorçamentárias: não são os totais da prefeitura."
+                    if excluir_intraorcamentarias else
+                    "Valores COM operações intraorçamentárias (totais da prefeitura)."),
     )

@@ -165,4 +165,5 @@ class ComparativoReceitaDespesa(RespostaComAno):
     receita_arrecadada: Decimal
     despesa: Decimal
     saldo: Decimal = Field(description="Positivo = arrecadou mais do que gastou")
+    observacao: str = Field(description="Diz se os valores incluem ou não intraorçamentárias")
     meses: list[ComparativoMes]

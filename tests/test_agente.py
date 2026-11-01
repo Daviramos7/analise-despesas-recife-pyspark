@@ -136,3 +136,31 @@ def test_guardrail_ano_nao_mexe_quando_ano_existe_ou_nao_ha_ano():
         llm = LLMFalso([_msg(tool_calls=[_tool_call("c1", "despesas_orgaos", {})]), _msg(content="R$ 10,00")])
         resp = Agente(llm, "falso", [], lambda n, a: (True, tool)).perguntar(pergunta)
         assert resp.texto == "R$ 10,00" and resp.guardrail is None
+
+
+def test_assinatura_de_pensamento_volta_intacta_para_o_llm():
+    """Gemini 3 exige que tool_calls[].extra_content volte no turno seguinte (senão HTTP 400)."""
+    from openai.types.chat import ChatCompletion
+
+    def completion(message):
+        return ChatCompletion.model_validate({
+            "id": "x", "object": "chat.completion", "created": 0, "model": "m",
+            "choices": [{"index": 0, "finish_reason": "stop", "message": message}]})
+
+    chamada = {"id": "c1", "type": "function",
+               "function": {"name": "metadados", "arguments": "{}"},
+               "extra_content": {"google": {"thought_signature": "SIG123"}}}
+    llm = LLMFalso([
+        completion({"role": "assistant", "content": None, "tool_calls": [chamada]}),
+        completion({"role": "assistant", "content": "ok"}),
+    ])
+    Agente(llm, "falso", [], lambda n, a: (True, "{}")).perguntar("x")
+    assistente = llm.recebido[1]["messages"][2]
+    assert assistente["tool_calls"][0]["extra_content"] == {"google": {"thought_signature": "SIG123"}}
+    assert assistente["content"] == ""
+
+
+def test_descricao_do_comparativo_desaconselha_uso_para_totais():
+    fs = {f.nome: f for f in gerar_ferramentas(app.openapi())}
+    desc = fs["comparativo_receita_despesa"].schema["function"]["description"]
+    assert "NÃO use para" in desc and "intraorçamentárias" in desc
