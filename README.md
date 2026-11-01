@@ -2,6 +2,8 @@
 
 [![ci](https://github.com/Daviramos7/orcamento-publico-recife/actions/workflows/ci.yml/badge.svg)](https://github.com/Daviramos7/orcamento-publico-recife/actions/workflows/ci.yml)
 
+**🌐 App online: [orcamento-recife.streamlit.app](https://orcamento-recife.streamlit.app)**: pergunte ao agente ou explore o painel.
+
 Pipeline de dados (PySpark + dbt + PostgreSQL), uma **API FastAPI** desenhada para ser lida por
 um LLM e um **agente com tool calling** que responde perguntas em português sobre o orçamento do
 Recife em 2023. O agente cita só números que vieram da API, e isso é **medido por evals**.
@@ -116,6 +118,8 @@ Edite o `.env` e deixe **só uma** opção descomentada: 1 = Ollama (padrão), 2
 | Quer começar do zero | volume do Postgres com dados antigos | `docker compose down -v` |
 
 ## 🌐 App online (Streamlit)
+
+**Acesse: <https://orcamento-recife.streamlit.app>**
 
 Painel com os números do orçamento e um chat com o agente, que mostra **quais consultas à API
 fez** e se **todos os números foram conferidos**. Tudo em planos gratuitos:
