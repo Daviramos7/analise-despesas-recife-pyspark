@@ -1,14 +1,14 @@
-name: despesas_recife
+name: orcamento_recife
 version: "0.2.0"
 config-version: 2
-profile: despesas_recife
+profile: orcamento_recife
 
 model-paths: ["models"]
 test-paths: ["tests"]
 clean-targets: ["target", "dbt_packages"]
 
 models:
-  despesas_recife:
+  orcamento_recife:
     staging:
       +schema: staging
       +materialized: view

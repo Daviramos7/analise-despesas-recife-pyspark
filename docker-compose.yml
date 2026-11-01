@@ -1,3 +1,5 @@
+name: orcamento-publico-recife
+
 x-postgres-env: &pg
   PGHOST: postgres
   PGPORT: "5432"
@@ -52,7 +54,7 @@ services:
 
   api:                 # FastAPI em http://localhost:8000/docs
     build: .
-    command: ["uvicorn", "despesas.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "orcamento.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       dbt:
         condition: service_completed_successfully
@@ -68,7 +70,7 @@ services:
   agente:              # docker compose run --rm agente
     build: .
     profiles: ["agente"]
-    command: ["python", "-m", "despesas.agente.cli"]
+    command: ["python", "-m", "orcamento.agente.cli"]
     stdin_open: true
     tty: true
     depends_on:

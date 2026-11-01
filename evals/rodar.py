@@ -17,9 +17,9 @@ from pathlib import Path
 import psycopg
 import yaml
 
-from despesas.agente.agente import RespostaAgente, criar_agente_padrao
-from despesas.avaliacao import ResultadoCaso, agregar, avaliar, resumir
-from despesas.config import dsn
+from orcamento.agente.agente import RespostaAgente, criar_agente_padrao
+from orcamento.avaliacao import ResultadoCaso, agregar, avaliar, resumir
+from orcamento.config import dsn
 
 AQUI = Path(__file__).parent
 

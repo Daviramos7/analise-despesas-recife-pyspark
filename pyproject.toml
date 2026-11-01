@@ -1,5 +1,5 @@
 [project]
-name = "despesas-recife"
+name = "orcamento-publico-recife"
 version = "0.3.0"
 description = "Receitas e despesas do Recife: pipeline PySpark + dbt, API FastAPI e agente de IA com evals"
 requires-python = ">=3.10,<3.12"

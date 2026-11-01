@@ -3,10 +3,10 @@ import json
 from decimal import Decimal
 from types import SimpleNamespace as NS
 
-from despesas.agente.agente import FRASE_SEM_DADO, MAX_ITERACOES, Agente
-from despesas.agente.ferramentas import gerar_ferramentas
-from despesas.agente.verificacao import extrair_numeros, numeros_sem_suporte
-from despesas.api.app import app
+from orcamento.agente.agente import FRASE_SEM_DADO, MAX_ITERACOES, Agente
+from orcamento.agente.ferramentas import gerar_ferramentas
+from orcamento.agente.verificacao import extrair_numeros, numeros_sem_suporte
+from orcamento.api.app import app
 
 
 def _tool_call(id_, nome, args):
@@ -104,7 +104,7 @@ def test_arredondamento_coerente_e_aceito_mas_errado_nao():
 
 
 def test_versao_de_prompt_e_enviada_ao_llm():
-    from despesas.agente.agente import PROMPTS
+    from orcamento.agente.agente import PROMPTS
     for versao, texto in PROMPTS.items():
         llm = LLMFalso([_msg(content="ok")])
         Agente(llm, "falso", [], lambda n, a: (True, "{}"), prompt_versao=versao).perguntar("x")

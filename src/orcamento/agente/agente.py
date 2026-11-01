@@ -14,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from despesas.agente.verificacao import numeros_sem_suporte
+from orcamento.agente.verificacao import numeros_sem_suporte
 
 MAX_ITERACOES = 6
 FRASE_SEM_DADO = "Não tenho esse dado"
@@ -184,8 +184,8 @@ def criar_agente_padrao() -> Agente:
     """Agente configurado por variável de ambiente. Nenhuma chave no código."""
     from openai import OpenAI
 
-    from despesas.agente.ferramentas import ExecutorHTTP, gerar_ferramentas
-    from despesas.api.app import app
+    from orcamento.agente.ferramentas import ExecutorHTTP, gerar_ferramentas
+    from orcamento.api.app import app
 
     ferramentas = gerar_ferramentas(app.openapi())
     cliente = OpenAI(

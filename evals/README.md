@@ -41,6 +41,6 @@ O conjunto de casos é **o mesmo** em todas as rodadas, com uma exceção regist
 
 - 30 casos escritos pelo próprio autor. O guardrail foi criado **depois** de ver o caso de 2022
   falhar, então esse caso não mede generalização. Casos novos devem vir do loop de feedback
-  (`python -m despesas.feedback`).
+  (`python -m orcamento.feedback`).
 - Um modelo e uma máquina. Comparar com outro modelo, como o Groq `llama-3.3-70b-versatile`,
   exige só trocar o `.env`.

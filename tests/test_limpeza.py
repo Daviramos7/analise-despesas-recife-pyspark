@@ -4,7 +4,7 @@ import pytest
 from pyspark.sql import Row
 from pyspark.sql.types import DecimalType, IntegerType
 
-from despesas.limpeza import (
+from orcamento.limpeza import (
     aparar_textos,
     canonizar_nome,
     limpar,
@@ -122,7 +122,7 @@ def test_limpar_preserva_linhas_e_credor_nao_informado(spark):
 # ---------- limpar_receitas ----------
 
 def test_limpar_receitas_tipos_valores_e_remove_mes_nome(spark):
-    from despesas.limpeza import limpar_receitas
+    from orcamento.limpeza import limpar_receitas
 
     df = spark.createDataFrame([Row(
         ano="2023", mes=" 7", mes_nome="Julho", unidade_codigo="15.01",

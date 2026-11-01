@@ -6,8 +6,8 @@ from pathlib import Path
 import psycopg
 import yaml
 
-from despesas.agente.agente import RespostaAgente
-from despesas.config import dsn
+from orcamento.agente.agente import RespostaAgente
+from orcamento.config import dsn
 
 DDL = """
 create schema if not exists app;

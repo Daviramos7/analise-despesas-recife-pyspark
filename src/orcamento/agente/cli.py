@@ -1,9 +1,9 @@
 """Conversa com o agente no terminal e coleta 👍/👎.
 
-    python -m despesas.agente.cli
+    python -m orcamento.agente.cli
 """
-from despesas.agente.agente import criar_agente_padrao
-from despesas.feedback import registrar
+from orcamento.agente.agente import criar_agente_padrao
+from orcamento.feedback import registrar
 
 
 def main() -> None:

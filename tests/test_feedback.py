@@ -3,9 +3,9 @@ import psycopg
 import pytest
 import yaml
 
-from despesas.agente.agente import Chamada, RespostaAgente
-from despesas.config import dsn
-from despesas.feedback import exportar_negativos, registrar
+from orcamento.agente.agente import Chamada, RespostaAgente
+from orcamento.config import dsn
+from orcamento.feedback import exportar_negativos, registrar
 
 
 def test_registra_e_exporta_so_negativos(tmp_path):

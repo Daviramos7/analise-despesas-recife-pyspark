@@ -10,7 +10,7 @@ import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
-from despesas.config import dsn
+from orcamento.config import dsn
 
 BANCO_TESTE = "despesas_test"
 D = Decimal
@@ -27,7 +27,7 @@ def cliente(monkeypatch_module):
     monkeypatch_module.setenv("PGDATABASE", BANCO_TESTE)
     with psycopg.connect(dsn(), autocommit=True) as conn:
         conn.execute((Path(__file__).parent / "fixtures" / "marts_minimo.sql").read_text("utf-8"))
-    from despesas.api.app import app
+    from orcamento.api.app import app
     return TestClient(app)
 
 

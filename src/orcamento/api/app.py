@@ -11,8 +11,8 @@ import psycopg
 from fastapi import Depends, FastAPI, HTTPException, Query
 from psycopg.rows import dict_row
 
-from despesas.api import consultas
-from despesas.api.modelos import (
+from orcamento.api import consultas
+from orcamento.api.modelos import (
     DESCRICAO_MEDIDA,
     BuscaItensReceita,
     ComparativoReceitaDespesa,
@@ -27,7 +27,7 @@ from despesas.api.modelos import (
     TotaisPorFuncao,
     TotaisPorOrgao,
 )
-from despesas.config import dsn
+from orcamento.config import dsn
 
 app = FastAPI(
     title="Receitas e Despesas Públicas do Recife",

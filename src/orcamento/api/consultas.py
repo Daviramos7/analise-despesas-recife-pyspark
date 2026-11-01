@@ -1,7 +1,7 @@
 """SQL das análises. Toda coluna dinâmica vem de whitelist (sem SQL injection)."""
 from psycopg import sql
 
-from despesas.api.modelos import Medida
+from orcamento.api.modelos import Medida
 
 COLUNA_MEDIDA = {
     Medida.empenhado: "valor_empenhado",

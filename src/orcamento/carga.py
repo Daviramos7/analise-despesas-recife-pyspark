@@ -10,7 +10,7 @@ import os
 import psycopg
 import pyarrow.dataset as ds
 
-from despesas.config import dsn
+from orcamento.config import dsn
 
 
 TIPOS_PG = {

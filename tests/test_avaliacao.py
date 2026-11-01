@@ -3,10 +3,10 @@ from pathlib import Path
 
 import yaml
 
-from despesas.agente.agente import Chamada, RespostaAgente
-from despesas.agente.ferramentas import gerar_ferramentas
-from despesas.api.app import app
-from despesas.avaliacao import TIPOS, avaliar, resumir
+from orcamento.agente.agente import Chamada, RespostaAgente
+from orcamento.agente.ferramentas import gerar_ferramentas
+from orcamento.api.app import app
+from orcamento.avaliacao import TIPOS, avaliar, resumir
 
 CASOS = yaml.safe_load((Path(__file__).parents[1] / "evals" / "casos.yaml").read_text("utf-8"))
 
@@ -58,7 +58,7 @@ def test_resumo():
 
 
 def test_resultado_guarda_argumentos_das_chamadas_e_agregado():
-    from despesas.avaliacao import agregar
+    from orcamento.avaliacao import agregar
     caso = {"id": "x", "pergunta": "p", "tipo": "texto", "ferramentas_aceitas": ["orgaos"]}
     r = avaliar(caso, RespostaAgente("p", "abc", [Chamada("orgaos", {"busca": "saude"}, True, "[]")]), "abc")
     assert r.chamadas == [{"ferramenta": "orgaos", "argumentos": {"busca": "saude"}, "ok": True,

@@ -18,4 +18,4 @@ COPY tests ./tests
 COPY evals ./evals
 COPY pyproject.toml .
 
-CMD ["python", "-m", "despesas.pipeline"]
+CMD ["python", "-m", "orcamento.pipeline"]

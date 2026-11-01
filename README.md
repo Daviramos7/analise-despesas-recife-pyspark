@@ -1,6 +1,6 @@
 # 🏛️ Receitas e Despesas Públicas do Recife: dados prontos para agentes de IA
 
-[![ci](https://github.com/Daviramos7/analise-despesas-recife-pyspark/actions/workflows/ci.yml/badge.svg)](https://github.com/Daviramos7/analise-despesas-recife-pyspark/actions/workflows/ci.yml)
+[![ci](https://github.com/Daviramos7/orcamento-publico-recife/actions/workflows/ci.yml/badge.svg)](https://github.com/Daviramos7/orcamento-publico-recife/actions/workflows/ci.yml)
 
 Pipeline de dados (PySpark + dbt + PostgreSQL), uma **API FastAPI** desenhada para ser lida por
 um LLM e um **agente com tool calling** que responde perguntas em português sobre o orçamento do
@@ -61,8 +61,8 @@ Portal de Dados Abertos (CSV despesas + receitas 2023)
 ### 2. Código e dados
 
 ```bash
-git clone https://github.com/Daviramos7/analise-despesas-recife-pyspark.git
-cd analise-despesas-recife-pyspark
+git clone https://github.com/Daviramos7/orcamento-publico-recife.git
+cd orcamento-publico-recife
 ```
 
 Os CSVs **não** ficam no repositório. Baixe no
@@ -93,7 +93,7 @@ uns 2 a 3 minutos. Está pronto quando aparecer `Uvicorn running on http://0.0.0
 | Rodar os 30 casos de eval | `docker compose run --rm --build --no-deps evals` |
 | Medir variância (3 rodadas) | `docker compose run --rm --build --no-deps evals python evals/rodar.py --repeticoes 3` |
 | Rodar os testes | `docker compose run --rm --build tests` |
-| Exportar os 👎 para candidatos de eval | `docker compose run --rm --no-deps agente python -m despesas.feedback` |
+| Exportar os 👎 para candidatos de eval | `docker compose run --rm --no-deps agente python -m orcamento.feedback` |
 
 ### 5. Trocar de LLM (opcional)
 
@@ -134,7 +134,7 @@ Medidas de despesa são whitelisted (`empenhado | liquidado | pago`) e injetadas
 
 ## 🤖 Agente
 
-- **Sem framework.** O loop inteiro está em [`src/despesas/agente/agente.py`](src/despesas/agente/agente.py)
+- **Sem framework.** O loop inteiro está em [`src/orcamento/agente/agente.py`](src/orcamento/agente/agente.py)
   e usa o SDK `openai` apontando pra qualquer endpoint compatível (Ollama, Groq, OpenAI).
 - **Tools geradas do OpenAPI** da própria API. A descrição que o LLM lê é a mesma do `/docs`,
   então existe uma fonte de contrato só.
@@ -143,7 +143,7 @@ Medidas de despesa são whitelisted (`empenhado | liquidado | pago`) e injetadas
   iterações. Temperatura 0.
 - **Guardrail de ano, em código:** se a pergunta cita um ano que não aparece no
   `anos_dos_dados` devolvido pelas tools, a resposta é substituída por "Não tenho esse dado".
-- **Checagem de grounding fora do LLM** ([`verificacao.py`](src/despesas/agente/verificacao.py)):
+- **Checagem de grounding fora do LLM** ([`verificacao.py`](src/orcamento/agente/verificacao.py)):
   extrai todo número da resposta (formato BR, "1,67 bilhão"…) e confere se ele aparece em alguma
   saída de tool, aceitando só o arredondamento coerente com o que foi escrito.
 
@@ -182,7 +182,7 @@ nas tools, e por um A/B de prompt que mostrou que o prompt não era a causa. Est
 ## 🔁 Feedback
 
 O CLI do agente pede 👍/👎 e grava em `app.interacoes`: pergunta, tools e argumentos, resposta,
-números sem suporte e voto. `python -m despesas.feedback` exporta os 👎 como **rascunho** em
+números sem suporte e voto. `python -m orcamento.feedback` exporta os 👎 como **rascunho** em
 `evals/candidatos.yaml`. Eles **não** viram caso de eval automaticamente: alguém escreve o
 `gabarito_sql` e confere, porque gabarito gerado pelo sistema avaliado não prova nada.
 

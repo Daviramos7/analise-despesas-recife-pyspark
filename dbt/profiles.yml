@@ -1,4 +1,4 @@
-despesas_recife:
+orcamento_recife:
   target: dev
   outputs:
     dev:

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from pyspark.sql import DataFrame, SparkSession
 
-from despesas.limpeza import limpar, limpar_receitas
+from orcamento.limpeza import limpar, limpar_receitas
 
 
 @dataclass(frozen=True)
@@ -27,7 +27,7 @@ DATASETS = {
 }
 
 
-def criar_spark(app: str = "despesas-recife") -> SparkSession:
+def criar_spark(app: str = "orcamento-publico-recife") -> SparkSession:
     os.environ.setdefault("SPARK_LOCAL_HOSTNAME", "localhost")
     return (
         SparkSession.builder.master("local[*]")

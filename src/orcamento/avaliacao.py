@@ -3,8 +3,8 @@ import unicodedata
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 
-from despesas.agente.agente import FRASE_SEM_DADO, RespostaAgente
-from despesas.agente.verificacao import extrair_numeros
+from orcamento.agente.agente import FRASE_SEM_DADO, RespostaAgente
+from orcamento.agente.verificacao import extrair_numeros
 
 TIPOS = {"numero", "texto", "recusa"}
 
@@ -53,7 +53,7 @@ def avaliar(caso: dict, resp: RespostaAgente, esperado) -> ResultadoCaso:
 
     acerto = _acertou(tipo, resp.texto, esperado, sem_suporte)
     if resp.guardrail:
-        from despesas.agente.verificacao import numeros_sem_suporte
+        from orcamento.agente.verificacao import numeros_sem_suporte
         texto_llm = resp.texto_llm or ""
         acerto_llm = _acertou(tipo, texto_llm, esperado, numeros_sem_suporte(
             texto_llm, [c.resultado for c in resp.chamadas], resp.pergunta))

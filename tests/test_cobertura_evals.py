@@ -11,10 +11,10 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
-from despesas.agente.ferramentas import gerar_ferramentas
-from despesas.agente.verificacao import numeros_das_tools
-from despesas.avaliacao import normalizar
-from despesas.config import dsn
+from orcamento.agente.ferramentas import gerar_ferramentas
+from orcamento.agente.verificacao import numeros_das_tools
+from orcamento.avaliacao import normalizar
+from orcamento.config import dsn
 
 CASOS = yaml.safe_load((Path(__file__).parents[1] / "evals" / "casos.yaml").read_text("utf-8"))
 
@@ -32,7 +32,7 @@ pytestmark = pytest.mark.skipif(not _banco_real_disponivel(), reason="banco com 
 
 @pytest.fixture(scope="module")
 def api():
-    from despesas.api.app import app
+    from orcamento.api.app import app
     caminhos = {f.nome: f.caminho for f in gerar_ferramentas(app.openapi())}
     cliente = TestClient(app)
     return lambda nome, args: cliente.get(caminhos[nome], params=args)
