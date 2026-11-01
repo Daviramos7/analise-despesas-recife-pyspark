@@ -1,6 +1,6 @@
 # Qualidade de dados: o que os testes encontraram
 
-Total de testes: 86 testes de dados no dbt + 93 no pytest (limpeza, API, agente, evals, feedback, app).
+Total de testes: 86 testes de dados no dbt + 97 no pytest (limpeza, API, agente, evals, feedback, app).
 Este arquivo registra **achados do dado oficial**, não bugs do pipeline.
 
 ## 1. Empenhos com acumulado anual negativo (WARN)

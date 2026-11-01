@@ -112,13 +112,14 @@ def _mensagem_assistente(msg, chamadas) -> dict[str, Any]:
 
 class Agente:
     def __init__(self, cliente, modelo: str, ferramentas_schema: list[dict], executar: Executor,
-                 prompt_versao: str = PROMPT_PADRAO):
+                 prompt_versao: str = PROMPT_PADRAO, max_tokens: int | None = None):
         self.cliente = cliente          # objeto com .chat.completions.create (SDK openai)
         self.modelo = modelo
         self.prompt_versao = prompt_versao
         self.prompt = PROMPTS[prompt_versao]
         self.ferramentas_schema = ferramentas_schema
         self.executar = executar
+        self.max_tokens = max_tokens    # teto de tokens por resposta do LLM (custo/cota)
 
     def perguntar(self, pergunta: str) -> RespostaAgente:
         mensagens: list[dict[str, Any]] = [
@@ -129,11 +130,13 @@ class Agente:
 
         for i in range(1, MAX_ITERACOES + 1):
             resposta.iteracoes = i
+            extras = {"max_tokens": self.max_tokens} if self.max_tokens else {}
             completion = self.cliente.chat.completions.create(
                 model=self.modelo,
                 messages=mensagens,
                 tools=self.ferramentas_schema,
                 temperature=0,  # reprodutibilidade dos evals
+                **extras,
             )
             msg = completion.choices[0].message
             chamadas = msg.tool_calls or []
@@ -219,4 +222,6 @@ def criar_agente_padrao(cliente_api=None) -> Agente:
         ferramentas_schema=[f.schema for f in ferramentas],
         executar=ExecutorHTTP(ferramentas, cliente=cliente_api),
         prompt_versao=os.getenv("PROMPT_VERSAO", PROMPT_PADRAO),
+        # Respostas do agente são curtas; o teto só corta abuso ("escreva um TCC...").
+        max_tokens=int(os.getenv("LLM_MAX_TOKENS", "1024")) or None,
     )

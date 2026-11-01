@@ -182,3 +182,15 @@ def test_executor_in_process_chama_a_mesma_api():
     ok, texto = ExecutorHTTP(fs, cliente=ClienteFalso())("despesas_orgaos", {"medida": "pago"})
     assert ok and chamados == [("/despesas/orgaos", {"medida": "pago"})]
     assert isinstance(TestClient(app), object)  # TestClient é aceito como cliente
+
+
+def test_max_tokens_vai_para_o_llm_quando_configurado():
+    llm = LLMFalso([_msg(content="ok")])
+    Agente(llm, "m", [], lambda n, a: (True, "{}"), max_tokens=512).perguntar("oi")
+    assert llm.recebido[0]["max_tokens"] == 512
+
+
+def test_sem_max_tokens_o_parametro_nao_e_enviado():
+    llm = LLMFalso([_msg(content="ok")])
+    Agente(llm, "m", [], lambda n, a: (True, "{}")).perguntar("oi")
+    assert "max_tokens" not in llm.recebido[0]

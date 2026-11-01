@@ -134,7 +134,12 @@ Visitante ─► Streamlit Community Cloud ── app + API FastAPI + agente (no
   (via `TestClient`, sem servidor separado), então os números da tela são os que os evals avaliam.
 - **Segurança:** o app usa o usuário `app_web`, que só lê os marts e só grava feedback.
   Ver [`deploy/supabase_setup.sql`](deploy/supabase_setup.sql).
-- **Limites do plano gratuito:** 15 perguntas por sessão; o Streamlit dorme após 12 h sem
+- **Proteção da cota do LLM:** limite **global** de 200 perguntas por dia (soma todos os
+  visitantes e sobrevive a recarregar a página; contado em `app.interacoes`, e se o banco não
+  responder o chat bloqueia em vez de gastar cota às cegas), 15 por sessão, 5 s entre perguntas,
+  300 caracteres por pergunta e teto de 1024 tokens por resposta (`LLM_MAX_TOKENS`). Ajustável
+  por `LIMITE_DIARIO_PERGUNTAS`.
+- **Limites do plano gratuito:** o Streamlit dorme após 12 h sem
   visita (acorda num clique, ~30 s); o Supabase pausaria após 7 dias, e o workflow
   [`keepalive.yml`](.github/workflows/keepalive.yml) evita isso. Se o Gemini estiver
   sobrecarregado (HTTP 503), o app avisa em vez de travar.

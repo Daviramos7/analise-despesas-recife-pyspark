@@ -27,6 +27,8 @@ end $$;
 grant usage on schema app to app_web;
 grant insert on app.interacoes to app_web;
 grant select (id), update (avaliacao, comentario) on app.interacoes to app_web;
+-- criado_em: o app conta as perguntas do dia para o limite diário global (nenhum texto exposto)
+grant select (criado_em) on app.interacoes to app_web;
 grant usage on sequence app.interacoes_id_seq to app_web;
 
 -- 3) Leitura dos marts. O dbt recria as tabelas a cada execução, então um GRANT simples

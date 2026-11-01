@@ -74,6 +74,28 @@ def votar(id_interacao: int, avaliacao: int, comentario: str | None = None,
             conn.close()
 
 
+def perguntas_hoje(conn: psycopg.Connection | None = None) -> int:
+    """Quantas perguntas o agente respondeu HOJE (fuso do Recife), somando todos os visitantes.
+
+    É a base do limite diário global do app: o limite por sessão some quando a página é
+    recarregada, este não. Conta só o que foi gravado (respostas que de fato gastaram cota do
+    LLM). Requer SELECT em (criado_em) para o usuário do app; ver deploy/supabase_setup.sql.
+    """
+    proprio = conn is None
+    conn = conn or psycopg.connect(dsn())
+    try:
+        if not conn.execute("select to_regclass('app.interacoes') is not null").fetchone()[0]:
+            return 0
+        return conn.execute(
+            """select count(*) from app.interacoes
+               where criado_em >= date_trunc('day', now() at time zone 'America/Recife')
+                                  at time zone 'America/Recife'"""
+        ).fetchone()[0]
+    finally:
+        if proprio:
+            conn.close()
+
+
 def exportar_negativos(destino: str = "evals/candidatos.yaml",
                        conn: psycopg.Connection | None = None) -> int:
     """Interações com 👎 viram RASCUNHO de caso de eval.

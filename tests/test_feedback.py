@@ -57,3 +57,25 @@ def test_voto_posterior_atualiza_interacao():
         c.execute("delete from app.interacoes where id=%s", (id_,))
     with pytest.raises(ValueError):
         votar(id_, 0)
+
+
+def test_perguntas_hoje_conta_todas_as_sessoes_do_dia():
+    try:
+        psycopg.connect(dsn(), connect_timeout=3).close()
+    except psycopg.OperationalError as e:
+        pytest.skip(f"Postgres indisponível: {e}")
+    from orcamento.feedback import perguntas_hoje
+    resp = RespostaAgente("p?", "r", [], modelo="t")
+    ids = []
+    try:
+        antes = perguntas_hoje()
+        ids = [registrar(resp), registrar(resp)]
+        with psycopg.connect(dsn()) as c:  # interação de ontem não entra na conta
+            ids.append(c.execute(
+                """insert into app.interacoes (criado_em, modelo, pergunta, resposta, chamadas,
+                   numeros_sem_suporte) values (now() - interval '2 days', 't', 'p', 'r', '[]', '[]')
+                   returning id""").fetchone()[0])
+        assert perguntas_hoje() == antes + 2
+    finally:
+        with psycopg.connect(dsn()) as c:
+            c.execute("delete from app.interacoes where id = any(%s)", (ids,))
