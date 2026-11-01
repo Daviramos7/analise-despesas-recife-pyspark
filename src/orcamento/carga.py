@@ -66,6 +66,10 @@ def carregar(origem: str, tabela_destino: str) -> int:
             raise RuntimeError(
                 f"carga inconsistente: parquet={tabela.num_rows} postgres={total}"
             )
+        # Estatísticas novas para o planner. Sem isso, após TRUNCATE + COPY o Postgres estimava
+        # ~22 linhas no join da fato (são 127 mil) e escolhia loops aninhados: o dbt passava de
+        # 2 min no Supabase e estourava o statement_timeout.
+        cur.execute(f"analyze {tabela_destino}")
 
     print(f"[carga] {total} linhas em {tabela_destino}")
     return total

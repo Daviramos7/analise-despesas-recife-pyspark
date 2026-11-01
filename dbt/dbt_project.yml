@@ -15,3 +15,7 @@ models:
     marts:
       +schema: marts
       +materialized: table
+      # Estatísticas atualizadas logo após criar cada tabela (boa prática para os joins
+      # seguintes). A causa do timeout no Supabase era outra: a raw sem ANALYZE após a carga
+      # (corrigido em src/orcamento/carga.py).
+      +post-hook: "analyze {{ this }}"
