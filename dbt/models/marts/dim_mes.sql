@@ -1,9 +1,10 @@
 -- Dimensão de tempo no grão de MÊS (o dado de origem não tem dia).
--- Uma linha por (ano, mês) presente na staging.
+-- Dimensão CONFORMADA: uma linha por (ano, mês) presente em despesas OU receitas.
 
 with meses as (
-    select distinct ano, mes
-    from {{ ref('stg_despesas') }}
+    select ano, mes from {{ ref('stg_despesas') }}
+    union
+    select ano, mes from {{ ref('stg_receitas') }}
 )
 
 select

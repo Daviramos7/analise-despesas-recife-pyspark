@@ -1,0 +1,236 @@
+# Casos de avaliação do agente.
+# gabarito_sql roda DIRETO em raw.despesas / raw.receitas (camada limpa), sem passar pela
+# API nem pelo dbt: se a API tiver bug, o gabarito não herda o bug.
+# referencia: chamada que, comprovadamente, contém a resposta (teste de cobertura da API,
+#   sem LLM). Se o eval falhar mas a referência passar, o problema é do agente, não da API.
+# tipo: numero (valor deve aparecer na resposta) | texto (trecho deve aparecer) |
+#       recusa (deve dizer "Não tenho esse dado" e não citar número inventado)
+
+# ------------------------------------------------------------------ despesas
+- id: desp_total_liquidado
+  pergunta: Quanto a Prefeitura do Recife gastou (liquidado) em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_orgaos, argumentos: {}}
+  ferramentas_aceitas: [despesas_orgaos, despesas_funcoes, despesas_evolucao_mensal]
+  gabarito_sql: select sum(valor_liquidado) from raw.despesas
+
+- id: desp_total_pago
+  pergunta: Qual foi o valor total pago pela prefeitura em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_orgaos, argumentos: {"medida": "pago"}}
+  ferramentas_aceitas: [despesas_orgaos, despesas_funcoes, despesas_evolucao_mensal]
+  gabarito_sql: select sum(valor_pago) from raw.despesas
+
+- id: desp_total_empenhado
+  pergunta: Quanto foi empenhado no total em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_orgaos, argumentos: {"medida": "empenhado"}}
+  ferramentas_aceitas: [despesas_orgaos, despesas_funcoes, despesas_evolucao_mensal]
+  gabarito_sql: select sum(valor_empenhado) from raw.despesas
+
+- id: desp_orgao_saude
+  pergunta: Quanto a Secretaria de Saúde gastou em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_orgaos, argumentos: {}}
+  ferramentas_aceitas: [despesas_orgaos, despesas_evolucao_mensal]
+  gabarito_sql: select sum(valor_liquidado) from raw.despesas where orgao_codigo = '48'
+
+- id: desp_orgao_educacao_pago
+  pergunta: Qual o valor pago pela Secretaria de Educação em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_orgaos, argumentos: {"medida": "pago"}}
+  ferramentas_aceitas: [despesas_orgaos, despesas_evolucao_mensal]
+  gabarito_sql: select sum(valor_pago) from raw.despesas where orgao_codigo = '14'
+
+- id: desp_maior_orgao
+  pergunta: Qual órgão da prefeitura mais gastou em 2023?
+  tipo: texto
+  referencia: {ferramenta: despesas_orgaos, argumentos: {}}
+  ferramentas_aceitas: [despesas_orgaos]
+  gabarito_sql: |
+    select 'SAÚDE' from (select orgao_nome from raw.despesas group by 1
+    order by sum(valor_liquidado) desc limit 1) x where orgao_nome like '%SAÚDE%'
+
+- id: desp_participacao_educacao
+  pergunta: Qual a participação percentual da Secretaria de Educação no total gasto em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_orgaos, argumentos: {}}
+  ferramentas_aceitas: [despesas_orgaos]
+  gabarito_sql: |
+    select round(100 * sum(valor_liquidado) filter (where orgao_codigo = '14')
+                 / sum(valor_liquidado), 2) from raw.despesas
+
+- id: desp_funcao_saude
+  pergunta: Quanto foi gasto com a área de saúde (função saúde) em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_funcoes, argumentos: {}}
+  ferramentas_aceitas: [despesas_funcoes]
+  gabarito_sql: select sum(valor_liquidado) from raw.despesas where funcao_nome = 'SAÚDE'
+
+- id: desp_funcao_urbanismo
+  pergunta: Quanto a prefeitura gastou com urbanismo em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_funcoes, argumentos: {}}
+  ferramentas_aceitas: [despesas_funcoes]
+  gabarito_sql: select sum(valor_liquidado) from raw.despesas where funcao_nome = 'URBANISMO'
+
+- id: desp_mes_marco
+  pergunta: Quanto foi liquidado em março de 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_evolucao_mensal, argumentos: {}}
+  ferramentas_aceitas: [despesas_evolucao_mensal, despesas_orgaos, despesas_funcoes]
+  gabarito_sql: select sum(valor_liquidado) from raw.despesas where mes_movimentacao = 3
+
+- id: desp_mes_maior
+  pergunta: Em qual mês de 2023 a prefeitura mais gastou?
+  tipo: texto
+  ferramentas_aceitas: [despesas_evolucao_mensal]
+  gabarito_sql: |
+    select (array['janeiro','fevereiro','março','abril','maio','junho','julho','agosto',
+                  'setembro','outubro','novembro','dezembro'])[mes_movimentacao]
+    from raw.despesas group by mes_movimentacao order by sum(valor_liquidado) desc limit 1
+
+- id: desp_variacao_nov_dez
+  pergunta: Qual foi a variação percentual da despesa liquidada de novembro para dezembro de 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_evolucao_mensal, argumentos: {}}
+  ferramentas_aceitas: [despesas_evolucao_mensal]
+  gabarito_sql: |
+    select round(100 * (sum(valor_liquidado) filter (where mes_movimentacao = 12)
+                      - sum(valor_liquidado) filter (where mes_movimentacao = 11))
+                 / sum(valor_liquidado) filter (where mes_movimentacao = 11), 2)
+    from raw.despesas
+
+- id: desp_acumulado_junho
+  pergunta: Quanto a prefeitura tinha liquidado no acumulado de janeiro a junho de 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_evolucao_mensal, argumentos: {}}
+  ferramentas_aceitas: [despesas_evolucao_mensal, despesas_orgaos, despesas_funcoes]
+  gabarito_sql: select sum(valor_liquidado) from raw.despesas where mes_movimentacao <= 6
+
+- id: desp_maior_credor
+  pergunta: Qual credor mais recebeu pagamentos da prefeitura em 2023?
+  tipo: texto
+  referencia: {ferramenta: despesas_credores_ranking, argumentos: {}}
+  ferramentas_aceitas: [despesas_credores_ranking]
+  gabarito_sql: |
+    select 'RECIFIN' from (select credor_nome from raw.despesas where credor_codigo <> '0'
+    group by 1 order by sum(valor_pago) desc limit 1) x where credor_nome like '%RECIFIN%'
+
+- id: desp_credor_caixa
+  pergunta: Quanto a Caixa Econômica Federal recebeu (valor pago) da prefeitura em 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_credores_ranking, argumentos: {}}
+  ferramentas_aceitas: [despesas_credores_ranking]
+  gabarito_sql: select sum(valor_pago) from raw.despesas where credor_nome = 'CAIXA ECONOMICA FEDERAL'
+
+- id: desp_educacao_dezembro
+  pergunta: Quanto a Secretaria de Educação liquidou em dezembro de 2023?
+  tipo: numero
+  referencia: {ferramenta: despesas_evolucao_mensal, argumentos: {"orgao_codigo": "14"}}
+  # 2026-11-01: incluído despesas_orgaos (mes_inicio=mes_fim=12), caminho válido que o
+  # modelo usou corretamente na 1ª rodada e a lista original não previa.
+  ferramentas_aceitas: [despesas_evolucao_mensal, despesas_orgaos]
+  gabarito_sql: |
+    select sum(valor_liquidado) from raw.despesas where orgao_codigo = '14' and mes_movimentacao = 12
+
+- id: desp_empenhado_1tri
+  pergunta: Quanto foi empenhado no primeiro trimestre de 2023 (janeiro a março)?
+  tipo: numero
+  referencia: {ferramenta: despesas_orgaos, argumentos: {"medida": "empenhado", "mes_inicio": 1, "mes_fim": 3}}
+  ferramentas_aceitas: [despesas_orgaos, despesas_evolucao_mensal, despesas_funcoes]
+  gabarito_sql: select sum(valor_empenhado) from raw.despesas where mes_movimentacao <= 3
+
+# ------------------------------------------------------------------ receitas
+- id: rec_total_arrecadado
+  pergunta: Quanto a Prefeitura do Recife arrecadou em 2023?
+  tipo: numero
+  referencia: {ferramenta: receitas_origens, argumentos: {}}
+  ferramentas_aceitas: [receitas_origens, receitas_evolucao_mensal, comparativo_receita_despesa]
+  gabarito_sql: select sum(receita_arrecadada) from raw.receitas
+
+- id: rec_iptu
+  pergunta: Quanto foi arrecadado de IPTU em 2023?
+  tipo: numero
+  referencia: {ferramenta: receitas_itens, argumentos: {"busca": "IPTU"}}
+  ferramentas_aceitas: [receitas_itens]
+  gabarito_sql: |
+    select sum(receita_arrecadada) from raw.receitas
+    where alinea_receita_nome = 'IMPOSTO SOBRE A PROPRIEDADE PREDIAL E TERRITORIAL URBANA'
+
+- id: rec_iss
+  pergunta: Qual foi a arrecadação de ISS em 2023?
+  tipo: numero
+  referencia: {ferramenta: receitas_itens, argumentos: {"busca": "ISS"}}
+  ferramentas_aceitas: [receitas_itens]
+  gabarito_sql: select sum(receita_arrecadada) from raw.receitas where alinea_receita_nome = 'IMPOSTOS SOBRE SERVIÇOS'
+
+- id: rec_fpm
+  pergunta: Quanto o Recife recebeu do Fundo de Participação dos Municípios (FPM) em 2023?
+  tipo: numero
+  referencia: {ferramenta: receitas_itens, argumentos: {"busca": "FPM"}}
+  ferramentas_aceitas: [receitas_itens]
+  gabarito_sql: |
+    select sum(receita_arrecadada) from raw.receitas
+    where alinea_receita_nome = 'COTA-PARTE DO FUNDO DE PARTICIPAÇÃO DOS MUNICÍPIOS - FPM'
+
+- id: rec_previsto
+  pergunta: Qual era a receita prevista (atualizada) para 2023?
+  tipo: numero
+  referencia: {ferramenta: receitas_origens, argumentos: {}}
+  ferramentas_aceitas: [receitas_origens]
+  gabarito_sql: select sum(receita_prevista_atualizada) from raw.receitas
+
+- id: rec_execucao
+  pergunta: Que percentual da receita prevista a prefeitura conseguiu arrecadar em 2023?
+  tipo: numero
+  referencia: {ferramenta: receitas_origens, argumentos: {}}
+  ferramentas_aceitas: [receitas_origens]
+  gabarito_sql: select round(100 * sum(receita_arrecadada) / sum(receita_prevista_atualizada), 2) from raw.receitas
+
+- id: rec_janeiro
+  pergunta: Quanto a prefeitura arrecadou em janeiro de 2023?
+  tipo: numero
+  referencia: {ferramenta: receitas_evolucao_mensal, argumentos: {}}
+  ferramentas_aceitas: [receitas_evolucao_mensal, receitas_origens, comparativo_receita_despesa]
+  gabarito_sql: select sum(receita_arrecadada) from raw.receitas where mes = 1
+
+- id: rec_transferencias_correntes
+  pergunta: Quanto a prefeitura arrecadou com transferências correntes em 2023?
+  tipo: numero
+  referencia: {ferramenta: receitas_origens, argumentos: {}}
+  ferramentas_aceitas: [receitas_origens]
+  gabarito_sql: |
+    select sum(receita_arrecadada) from raw.receitas
+    where categoria_receita_codigo = '1' and fonte_origem_receita_nome = 'TRANSFERÊNCIAS CORRENTES'
+
+- id: comp_saldo
+  pergunta: Em 2023 a prefeitura arrecadou mais do que gastou? Qual foi o saldo?
+  tipo: numero
+  referencia: {ferramenta: comparativo_receita_despesa, argumentos: {}}
+  ferramentas_aceitas: [comparativo_receita_despesa]
+  # sem intraorçamentárias (padrão da API): receita categoria 7 e despesa modalidade 91
+  gabarito_sql: |
+    select (select sum(receita_arrecadada) from raw.receitas where categoria_receita_codigo <> '7')
+         - (select sum(valor_liquidado) from raw.despesas where modalidade_aplicacao_codigo <> '91')
+
+# ------------------------------------------------------------------ recusas
+- id: recusa_outro_ano
+  pergunta: Quanto a Secretaria de Saúde gastou em 2022?
+  tipo: recusa
+  ferramentas_aceitas: [metadados, despesas_orgaos, orgaos]
+
+- id: recusa_bairro
+  pergunta: Quanto a prefeitura gastou no bairro de Boa Viagem em 2023?
+  tipo: recusa
+  ferramentas_aceitas: [metadados]
+
+- id: recusa_salario
+  pergunta: Qual é o salário do prefeito do Recife?
+  tipo: recusa
+  ferramentas_aceitas: [metadados]
+
+- id: recusa_dia
+  pergunta: Quanto a prefeitura gastou no dia 15 de março de 2023?
+  tipo: recusa
+  ferramentas_aceitas: [metadados]

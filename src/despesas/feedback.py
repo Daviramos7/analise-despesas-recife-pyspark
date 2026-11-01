@@ -1,0 +1,88 @@
+"""Loop de feedback: guarda cada interação e exporta as ruins como candidatas a eval."""
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+import psycopg
+import yaml
+
+from despesas.agente.agente import RespostaAgente
+from despesas.config import dsn
+
+DDL = """
+create schema if not exists app;
+create table if not exists app.interacoes (
+    id           bigserial primary key,
+    criado_em    timestamptz not null default now(),
+    modelo       text not null,
+    pergunta     text not null,
+    resposta     text not null,
+    chamadas     jsonb not null,          -- [{ferramenta, argumentos, ok}]
+    numeros_sem_suporte jsonb not null,   -- detector de alucinação
+    avaliacao    smallint check (avaliacao in (-1, 1)),  -- 👎 = -1, 👍 = 1, null = sem voto
+    comentario   text
+);
+"""
+
+
+def garantir_tabela(conn: psycopg.Connection) -> None:
+    conn.execute(DDL)
+
+
+def registrar(resp: RespostaAgente, avaliacao: int | None = None,
+              comentario: str | None = None, conn: psycopg.Connection | None = None) -> int:
+    proprio = conn is None
+    conn = conn or psycopg.connect(dsn())
+    try:
+        garantir_tabela(conn)
+        chamadas = [{"ferramenta": c.ferramenta, "argumentos": c.argumentos, "ok": c.ok}
+                    for c in resp.chamadas]
+        linha = conn.execute(
+            """insert into app.interacoes
+               (modelo, pergunta, resposta, chamadas, numeros_sem_suporte, avaliacao, comentario)
+               values (%s, %s, %s, %s, %s, %s, %s) returning id""",
+            (resp.modelo, resp.pergunta, resp.texto, json.dumps(chamadas, ensure_ascii=False),
+             json.dumps(resp.numeros_sem_suporte, ensure_ascii=False), avaliacao, comentario),
+        ).fetchone()
+        conn.commit()
+        return linha[0]
+    finally:
+        if proprio:
+            conn.close()
+
+
+def exportar_negativos(destino: str = "evals/candidatos.yaml",
+                       conn: psycopg.Connection | None = None) -> int:
+    """Interações com 👎 viram RASCUNHO de caso de eval.
+
+    Não entram direto em casos.yaml: alguém precisa escrever o gabarito_sql e conferir o
+    resultado. Gabarito gerado pelo próprio sistema avaliado não prova nada.
+    """
+    proprio = conn is None
+    conn = conn or psycopg.connect(dsn())
+    try:
+        garantir_tabela(conn)
+        linhas = conn.execute(
+            """select id, pergunta, resposta, chamadas, comentario from app.interacoes
+               where avaliacao = -1 order by id"""
+        ).fetchall()
+    finally:
+        if proprio:
+            conn.close()
+    rascunhos = [{
+        "id": f"feedback_{i}",
+        "pergunta": pergunta,
+        "tipo": "PREENCHER (numero | texto | recusa)",
+        "ferramentas_aceitas": sorted({c["ferramenta"] for c in chamadas}) or ["PREENCHER"],
+        "gabarito_sql": "PREENCHER: SQL direto em raw.despesas / raw.receitas",
+        "contexto": {"resposta_ruim": resposta, "comentario": comentario},
+    } for i, pergunta, resposta, chamadas, comentario in linhas]
+    cabecalho = (f"# Gerado em {datetime.now(timezone.utc):%Y-%m-%d %H:%M} UTC a partir de 👎.\n"
+                 "# Revise, escreva o gabarito_sql e mova para evals/casos.yaml.\n")
+    Path(destino).write_text(
+        cabecalho + yaml.safe_dump(rascunhos, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return len(rascunhos)
+
+
+if __name__ == "__main__":
+    print(f"{exportar_negativos()} candidatos exportados para evals/candidatos.yaml")

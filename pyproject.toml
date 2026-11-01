@@ -1,9 +1,12 @@
 [project]
 name = "despesas-recife"
-version = "0.2.0"
-description = "Pipeline de dados das despesas orçamentárias do Recife: bruto -> limpo -> modelo dimensional"
+version = "0.3.0"
+description = "Receitas e despesas do Recife: pipeline PySpark + dbt, API FastAPI e agente de IA com evals"
 requires-python = ">=3.10,<3.12"
-dependencies = ["pyspark==3.5.6"]
+dependencies = [
+    "pyspark==3.5.6", "pyarrow==17.0.0", "psycopg[binary]==3.2.3", "fastapi==0.115.6",
+    "uvicorn==0.32.1", "httpx==0.28.1", "openai==1.58.1", "pyyaml==6.0.2",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
@@ -11,3 +14,4 @@ dev = ["pytest>=8"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+filterwarnings = ["ignore::DeprecationWarning"]

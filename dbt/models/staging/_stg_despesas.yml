@@ -4,7 +4,9 @@ models:
   - name: stg_despesas
     description: Despesas da camada limpa com nomes padronizados
     data_tests:
-      - grao_unico
+      - unique_combinacao:
+          arguments:
+            colunas: [unidade_codigo, empenho_numero, subempenho, ano, mes]
     columns:
       - name: mes
         data_tests:

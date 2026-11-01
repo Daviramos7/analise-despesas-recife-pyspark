@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_receitas
+    description: Receitas orçamentárias da camada limpa com nomes padronizados
+    data_tests:
+      - unique_combinacao:
+          arguments:
+            colunas: [unidade_codigo, fonte_recurso_codigo, categoria_receita_codigo, origem_codigo,
+                      especie_codigo, rubrica_codigo, alinea_codigo, subalinea_codigo,
+                      receita_local_codigo, ano, mes]
+    columns:
+      - name: mes
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      - name: valor_arrecadado
+        data_tests: [not_null]
+      - name: valor_previsto_atualizado
+        data_tests: [not_null]

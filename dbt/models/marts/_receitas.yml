@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: dim_classif_receita
+    description: Natureza da receita achatada; grão = caminho completo dos 7 códigos
+    data_tests:
+      - unique_combinacao:
+          arguments:
+            colunas: [categoria_receita_codigo, origem_codigo, especie_codigo, rubrica_codigo,
+                      alinea_codigo, subalinea_codigo, receita_local_codigo]
+    columns:
+      - name: sk_classif_receita
+        data_tests: [unique, not_null]
+      - name: intraorcamentaria
+        data_tests: [not_null]
+
+  - name: fato_receita_movimento
+    description: Movimento mensal de receita (previsão e arrecadação) por natureza, unidade e fonte
+    data_tests:
+      - unique_combinacao:
+          arguments:
+            colunas: [sk_unidade, sk_fonte_recurso, sk_classif_receita, sk_mes]
+    columns:
+      - name: sk_unidade
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_unidade')", field: sk_unidade}
+      - name: sk_mes
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_mes')", field: sk_mes}
+      - name: sk_fonte_recurso
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_fonte_recurso')", field: sk_fonte_recurso}
+      - name: sk_classif_receita
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_classif_receita')", field: sk_classif_receita}
+      - name: valor_arrecadado
+        data_tests: [not_null]

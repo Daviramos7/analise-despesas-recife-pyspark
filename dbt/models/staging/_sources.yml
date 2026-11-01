@@ -6,3 +6,5 @@ sources:
     tables:
       - name: despesas
         description: Uma linha por movimento mensal de subempenho numa unidade orçamentária
+      - name: receitas
+        description: Uma linha por movimento mensal de uma natureza de receita, por unidade e fonte

@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
 COPY tests ./tests
+COPY evals ./evals
 COPY pyproject.toml .
 
 CMD ["python", "-m", "despesas.pipeline"]

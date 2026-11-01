@@ -117,3 +117,23 @@ def test_limpar_preserva_linhas_e_credor_nao_informado(spark):
     saida = limpar(df)
     assert saida.count() == 2
     assert {r.credor_codigo for r in saida.collect()} == {"04301727", "0"}
+
+
+# ---------- limpar_receitas ----------
+
+def test_limpar_receitas_tipos_valores_e_remove_mes_nome(spark):
+    from despesas.limpeza import limpar_receitas
+
+    df = spark.createDataFrame([Row(
+        ano="2023", mes=" 7", mes_nome="Julho", unidade_codigo="15.01",
+        receita_prevista="553.000.000,00", receita_prevista_acrescimo="0,00",
+        receita_prevista_atualizada="553.000.000,00", receita_arrecadada="-10,50",
+    )])
+    saida = limpar_receitas(df)
+    linha = saida.first()
+
+    assert "mes_nome" not in saida.columns
+    assert saida.schema["mes"].dataType == IntegerType()
+    assert linha.mes == 7
+    assert linha.receita_prevista == Decimal("553000000.00")
+    assert linha.receita_arrecadada == Decimal("-10.50")  # dedução: negativo é válido

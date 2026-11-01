@@ -1,3 +1,18 @@
+x-postgres-env: &pg
+  PGHOST: postgres
+  PGPORT: "5432"
+  PGDATABASE: despesas
+  PGUSER: despesas
+  PGPASSWORD: despesas
+
+x-llm-env: &llm
+  API_URL: http://api:8000
+  # Padrão: Ollama rodando no Windows (fora do Docker). Troque no .env para usar Groq/OpenAI.
+  LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+  LLM_MODEL: ${LLM_MODEL:-qwen2.5:7b}
+  LLM_API_KEY: ${LLM_API_KEY:-ollama}
+  PROMPT_VERSAO: ${PROMPT_VERSAO:-v1}
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -15,40 +30,77 @@ services:
       timeout: 3s
       retries: 20
 
-  pipeline:
+  pipeline:            # CSV -> PySpark -> Parquet -> raw.despesas / raw.receitas
     build: .
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      PGHOST: postgres
-      PGPORT: "5432"
-      PGDATABASE: despesas
-      PGUSER: despesas
-      PGPASSWORD: despesas
+    environment: *pg
     volumes:
       - ./data:/app/data
 
-  dbt:
+  dbt:                 # raw -> staging -> marts (star schema) + testes de dados
     build: ./dbt
     depends_on:
       postgres:
         condition: service_healthy
       pipeline:
         condition: service_completed_successfully
-    environment:
-      PGHOST: postgres
-      PGPORT: "5432"
-      PGDATABASE: despesas
-      PGUSER: despesas
-      PGPASSWORD: despesas
+    environment: *pg
     volumes:
       - ./dbt:/app/dbt
 
-  tests:
+  api:                 # FastAPI em http://localhost:8000/docs
+    build: .
+    command: ["uvicorn", "despesas.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      dbt:
+        condition: service_completed_successfully
+    environment: *pg
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/metadados')"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  agente:              # docker compose run --rm agente
+    build: .
+    profiles: ["agente"]
+    command: ["python", "-m", "despesas.agente.cli"]
+    stdin_open: true
+    tty: true
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      <<: [*pg, *llm]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  evals:               # docker compose run --rm evals
+    build: .
+    profiles: ["evals"]
+    command: ["python", "evals/rodar.py"]
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      <<: [*pg, *llm]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./evals:/app/evals   # resultados ficam versionáveis em evals/resultados/
+
+  tests:               # docker compose run --rm tests
     build: .
     profiles: ["tests"]
     command: ["python", "-m", "pytest", "-q"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: *pg
 
 volumes:
   pgdata:

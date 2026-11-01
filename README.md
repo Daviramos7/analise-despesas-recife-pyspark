@@ -1,379 +1,200 @@
-# 🏛️ Análise de Despesas Públicas do Recife — PySpark
+# 🏛️ Receitas e Despesas Públicas do Recife: dados prontos para agentes de IA
 
-> Pipeline ETL com Apache Spark para ingestão, tratamento e análise de despesas orçamentárias do Município do Recife em 2023.
+Pipeline de dados (PySpark + dbt + PostgreSQL), uma **API FastAPI** desenhada para ser lida por
+um LLM e um **agente com tool calling** que responde perguntas em português sobre o orçamento do
+Recife em 2023. O agente cita só números que vieram da API, e isso é **medido por evals**.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Daviramos7/analise-despesas-recife-pyspark/blob/main/analise.ipynb)
-
-![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge\&logo=python\&logoColor=white)
-![PySpark](https://img.shields.io/badge/PySpark-3.x-orange?style=for-the-badge\&logo=apachespark\&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge\&logo=pandas\&logoColor=white)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Concluído-success?style=for-the-badge)
+> **Status:** funcionando de ponta a ponta. Agente com `qwen2.5:7b` local: **96,7% de acerto
+> do LLM sozinho e 100% com guardrail** em 30 casos, sem nenhum número inventado.
+> [Detalhes e limites](#-resultados-dos-evals).
 
 ---
 
-## 📌 Sobre o projeto
+## 🎯 O problema
 
-Este projeto implementa um pipeline de dados para analisar as despesas orçamentárias do Recife em 2023.
+Os dados de orçamento do Recife são públicos, mas responder "quanto a prefeitura arrecadou de IPTU"
+ou "a despesa superou a receita em algum mês?" exige baixar CSVs de 80 MB, entender a
+classificação orçamentária e somar do jeito certo (empenhado, liquidado ou pago? com ou sem
+operações intraorçamentárias?).
 
-O fluxo utiliza PySpark para processar o conjunto completo de dados e transfere para o Pandas apenas os resultados já agregados que serão utilizados na visualização.
+Um LLM sozinho **inventa** esses números. Este projeto dá a ele uma API confiável e mede quanto
+ele acerta e quanto ele alucina.
 
-O pipeline executa automaticamente:
-
-* download e validação do dataset;
-* detecção de respostas HTML inválidas;
-* detecção automática do separador do CSV;
-* normalização dos nomes das colunas;
-* limpeza de valores monetários brasileiros;
-* processamento e agregações com PySpark;
-* validações de qualidade dos dados;
-* ranking dos órgãos por valor liquidado;
-* geração de visualização em formato 16:9;
-* exportação dos resultados em CSV, JSON, PNG e ZIP.
-
----
-
-## 📊 Resultados da análise
-
-Na execução com o dataset de 2023, foram encontrados:
-
-| Métrica                           |               Resultado |
-| --------------------------------- | ----------------------: |
-| Registros processados             |             **127.119** |
-| Valor liquidado                   | **R$ 7.803.361.234,91** |
-| Percentual pago sobre o liquidado |              **94,05%** |
-
-### Maiores órgãos por valor liquidado
-
-Entre os maiores valores identificados estão:
-
-|  # | Órgão                        |   Valor aproximado |
-| -: | ---------------------------- | -----------------: |
-|  1 | Secretaria de Saúde          | **R$ 1,67 bilhão** |
-|  2 | Secretaria de Educação       | **R$ 1,56 bilhão** |
-|  3 | Secretaria de Infraestrutura | **R$ 1,27 bilhão** |
-|  4 | Encargos Gerais do Município | **R$ 810 milhões** |
-
-Os valores são calculados diretamente a partir do dataset processado pelo pipeline.
-
----
-
-## ⚡ Métricas de execução
-
-A aplicação apresenta ao final de cada execução:
-
-* quantidade de registros processados;
-* tempo real de processamento no Spark;
-* tamanho do arquivo de entrada;
-* quantidade de partições do DataFrame;
-* quantidade de órgãos ausentes;
-* quantidade de valores monetários inválidos;
-* versão do Apache Spark utilizada.
-
-> O tempo de execução pode variar de acordo com a máquina, disponibilidade do Google Colab, conexão com a internet e versão do Spark. Por isso, o projeto não utiliza um tempo fixo como resultado oficial.
-
----
-
-## 🏗️ Arquitetura do pipeline
+## 🏗️ Arquitetura
 
 ```text
-Portal de Dados Abertos do Recife
-                 │
-                 ▼
-     Download com requests e retry
-                 │
-                 ├── Validação HTTP
-                 ├── Detecção de HTML
-                 ├── Validação do CSV
-                 └── Upload manual no Colab como fallback
-                 │
-                 ▼
-          Apache Spark
-                 │
-       ┌─────────┴─────────┐
-       │      EXTRACT      │
-       │                   │
-       │ spark.read.csv()  │
-       │ separador         │
-       │ detectado         │
-       │ automaticamente   │
-       └─────────┬─────────┘
-                 │
-                 ▼
-       ┌───────────────────┐
-       │     TRANSFORM     │
-       │                   │
-       │ normalização das  │
-       │ colunas           │
-       │                   │
-       │ limpeza de moeda  │
-       │ brasileira        │
-       │                   │
-       │ conversão para    │
-       │ DoubleType        │
-       │                   │
-       │ MEMORY_AND_DISK   │
-       └─────────┬─────────┘
-                 │
-                 ▼
-       ┌───────────────────┐
-       │     ANALYTICS     │
-       │                   │
-       │ totais financeiros│
-       │ validações        │
-       │ groupBy + sum     │
-       │ ranking Top 10    │
-       └─────────┬─────────┘
-                 │
-                 ▼
-       Pandas + Matplotlib
-                 │
-                 ▼
-         CSV · JSON · PNG · ZIP
+Portal de Dados Abertos (CSV despesas + receitas 2023)
+        │
+        ▼
+ PySpark ── limpeza testada (valores BR, trim, tipos) ──► Parquet particionado por mês
+        │
+        ▼  COPY idempotente (TRUNCATE + COPY numa transação)
+ PostgreSQL  raw.despesas · raw.receitas
+        │
+        ▼  dbt: staging → star schema + 86 testes de dados
+ marts: fato_despesa_movimento · fato_receita_movimento
+        dim_unidade · dim_mes · dim_fonte_recurso   (conformadas)
+        dim_credor · dim_classif_economica · dim_classif_funcional · dim_classif_receita
+        │
+        ▼
+ FastAPI  10 endpoints tipados (Pydantic), com descrições escritas para o LLM
+        │  OpenAPI
+        ▼
+ Agente  tools geradas do OpenAPI · loop de tool calling no SDK openai · temperatura 0
+        │        ├─► Ollama (local, grátis)  ou  Groq / OpenAI (por variável de ambiente)
+        │        └─► checagem de grounding: todo número citado precisa estar na saída de uma tool
+        ▼
+ Evals (30 casos, gabarito via SQL direto no raw)   ·   Feedback 👍/👎 → app.interacoes
 ```
 
----
+## 🚀 Como rodar
 
-## 🛠️ Decisões técnicas
+Pré-requisitos: Docker Desktop. Pra usar o agente sem custo, o [Ollama](https://ollama.com/download)
+com `ollama pull qwen2.5:7b`.
 
-### Validação do download
-
-O portal pode retornar uma página HTML, redirecionamento ou erro temporário no lugar do CSV.
-
-Antes de iniciar o processamento, o pipeline verifica:
-
-* status da resposta HTTP;
-* tipo do conteúdo retornado;
-* primeiros bytes do arquivo;
-* tamanho mínimo;
-* estrutura do cabeçalho;
-* presença de separadores válidos.
-
-Isso impede que uma página iniciada por `<!DOCTYPE html>` seja interpretada pelo Spark como um arquivo CSV.
-
-### Fallback de upload no Google Colab
-
-Caso o Portal de Dados Abertos recuse a conexão do Colab, o notebook abre automaticamente uma janela para envio manual do CSV.
-
-Depois do upload, o arquivo passa pelas mesmas validações e o pipeline continua normalmente.
-
-### Tratamento da moeda brasileira
-
-Os valores monetários do dataset podem utilizar o padrão brasileiro:
-
-```text
-1.234.567,89
-```
-
-O pipeline:
-
-1. remove espaços e símbolos monetários;
-2. remove os pontos de milhar;
-3. substitui a vírgula decimal por ponto;
-4. converte o resultado para `DoubleType`.
-
-Exemplo:
-
-```text
-1.234.567,89 → 1234567.89
-```
-
-### Normalização das colunas
-
-Os nomes das colunas são convertidos para um padrão consistente:
-
-```text
-Valor Liquidado → valor_liquidado
-Órgão Nome → orgao_nome
-```
-
-Também são removidos:
-
-* acentos;
-* espaços;
-* caracteres especiais;
-* duplicações de separadores.
-
-Antes da análise, o código confirma a existência das colunas obrigatórias.
-
-### Persistência com `MEMORY_AND_DISK`
-
-O DataFrame transformado é persistido com:
-
-```python
-StorageLevel.MEMORY_AND_DISK
-```
-
-O Spark utiliza memória sempre que possível e pode utilizar disco caso o conjunto de dados não caiba completamente na memória disponível.
-
-### Conversão controlada para Pandas
-
-Os 127 mil registros não são enviados diretamente para o Pandas.
-
-O PySpark executa:
-
-* limpeza;
-* filtros;
-* agrupamentos;
-* somas;
-* ordenação;
-* seleção dos maiores órgãos.
-
-Somente o resultado agregado do Top 10 é convertido para Pandas para geração da visualização.
-
----
-
-## 📁 Arquivos gerados
-
-Ao final da execução, o pipeline cria:
-
-```text
-saida_auditoria_recife_2023/
-├── 04_dashboard_portfolio.png
-├── resumo_execucao.json
-└── top_10_orgaos_por_valor_liquidado.csv
-```
-
-Também é gerado um arquivo compactado:
-
-```text
-saida_auditoria_recife_2023.zip
-```
-
-### Dashboard
-
-O arquivo:
-
-```text
-04_dashboard_portfolio.png
-```
-
-é gerado em proporção 16:9 e apresenta:
-
-* quantidade de registros processados;
-* valor total liquidado;
-* percentual pago sobre o liquidado;
-* maiores órgãos por valor liquidado.
-
----
-
-## 🚀 Como executar
-
-### Google Colab
-
-1. Clique no badge **Open in Colab** no início deste README.
-2. No Colab, selecione:
-
-```text
-Ambiente de execução → Executar tudo
-```
-
-3. Aguarde o download e o processamento do dataset.
-4. Caso o download automático falhe, selecione o CSV quando a janela de upload for exibida.
-5. Acesse a pasta de resultados:
-
-```text
-/content/saida_auditoria_recife_2023/
-```
-
-O notebook instala automaticamente as dependências ausentes.
-
----
-
-### Execução local
-
-Clone o repositório:
+1. Baixe os CSVs de **despesas** e **receitas orçamentárias 2023** no
+   [Portal de Dados Abertos do Recife](https://dados.recife.pe.gov.br) e salve em `data/raw/`
+   (`despesas-orcamentarias-2023.csv` e `receitas-orcamentarias-2023.csv`).
+2. Suba tudo:
 
 ```bash
-git clone https://github.com/Daviramos7/analise-despesas-recife-pyspark.git
-cd analise-despesas-recife-pyspark
+docker compose up --build api        # pipeline → dbt → API em http://localhost:8000/docs
 ```
 
-Crie e ative um ambiente virtual:
+3. Use:
 
 ```bash
-python -m venv .venv
+docker compose run --rm agente       # conversa no terminal + 👍/👎
+docker compose run --rm evals        # roda os 30 casos e salva o relatório
+docker compose run --rm tests        # pytest
+python -m despesas.feedback          # exporta os 👎 para evals/candidatos.yaml
 ```
 
-No Windows:
+**Trocar de LLM:** copie `.env.example` para `.env`. O padrão é Ollama local. Pra Groq (plano
+gratuito, modelo de 70B), descomente as linhas da opção 2. **A chave só existe no `.env`, que está
+no `.gitignore`.**
 
-```bash
-.venv\Scripts\activate
-```
+## 🔌 API
 
-No Linux ou macOS:
+| Endpoint | Responde |
+|---|---|
+| `GET /metadados` | o que existe **e o que não existe** nos dados (anos, granularidade, limitações) |
+| `GET /orgaos?busca=` | código do órgão a partir do nome (sem precisar de acento) |
+| `GET /despesas/orgaos` | total por órgão no período, ranking (`rank()`), % do total |
+| `GET /despesas/evolucao-mensal` | mês a mês com variação (`lag()`) e acumulado (`sum() over`) |
+| `GET /despesas/credores/ranking` | maiores credores, consolidados por nome |
+| `GET /despesas/funcoes` | gasto por área (Saúde, Educação, Urbanismo…) |
+| `GET /receitas/origens` | arrecadado × previsto por origem e % de execução |
+| `GET /receitas/itens?busca=IPTU` | receita específica, com siglas (IPTU, ISS, FPM, FUNDEB…) |
+| `GET /receitas/evolucao-mensal` | arrecadação mês a mês com variação e acumulado |
+| `GET /comparativo/receita-despesa` | receita × despesa e saldo, sem intraorçamentárias por padrão |
 
-```bash
-source .venv/bin/activate
-```
+Medidas de despesa são whitelisted (`empenhado | liquidado | pago`) e injetadas com
+`psycopg.sql.Identifier`, então não tem SQL injection por parâmetro.
 
-Instale as dependências:
+## 🤖 Agente
 
-```bash
-pip install pyspark pandas matplotlib requests
-```
+- **Sem framework.** O loop inteiro está em [`src/despesas/agente/agente.py`](src/despesas/agente/agente.py)
+  e usa o SDK `openai` apontando pra qualquer endpoint compatível (Ollama, Groq, OpenAI).
+- **Tools geradas do OpenAPI** da própria API. A descrição que o LLM lê é a mesma do `/docs`,
+  então existe uma fonte de contrato só.
+- **Regras no prompt (versionado: `PROMPT_VERSAO`):** só citar números das tools, nunca calcular
+  por conta própria e dizer "Não tenho esse dado" quando não houver dado. Limite de 6
+  iterações. Temperatura 0.
+- **Guardrail de ano, em código:** se a pergunta cita um ano que não aparece no
+  `anos_dos_dados` devolvido pelas tools, a resposta é substituída por "Não tenho esse dado".
+- **Checagem de grounding fora do LLM** ([`verificacao.py`](src/despesas/agente/verificacao.py)):
+  extrai todo número da resposta (formato BR, "1,67 bilhão"…) e confere se ele aparece em alguma
+  saída de tool, aceitando só o arredondamento coerente com o que foi escrito.
 
-Execute o notebook:
+## 📏 Evals
 
-```bash
-jupyter notebook analise.ipynb
-```
+[`evals/casos.yaml`](evals/casos.yaml) tem **30 casos**: 17 de despesa, 9 de receita/comparativo
+e **4 que o agente deve recusar** (outro ano, bairro, salário individual, valor por dia).
 
-Ou execute a versão Python, caso ela esteja presente no repositório:
+- **O gabarito é SQL direto em `raw.*`**, sem passar pela API nem pelo dbt. Se a API tiver bug,
+  o gabarito não herda o bug. Foi assim que um eval encontrou o problema dos credores com vários
+  códigos (ver [`docs/qualidade.md`](docs/qualidade.md)).
+- **Teste de cobertura sem LLM:** pra cada caso respondível, uma chamada de referência prova que
+  a resposta está na saída da API (25/25). Então, se um eval falha, o problema é do agente.
+- **Métricas por caso:** acerto, tool correta, **números citados sem suporte** (detector de
+  alucinação) e iterações.
 
-```bash
-python recife_public_audit_2023.py
-```
+## 📊 Resultados dos evals
 
-> Para execução local com PySpark, é necessário ter uma versão compatível do Java instalada.
+`qwen2.5:7b` local (Ollama, RTX 3060), temperatura 0, 30 casos, 3 repetições:
 
----
+| Métrica | Resultado |
+|---|---:|
+| Acerto (agente completo, com guardrail) | **100%** (30/30 nas 3 rodadas) |
+| Acerto do LLM sozinho (sem guardrail) | **96,7%** |
+| Tool correta | 100% |
+| Respostas com número sem suporte nas tools | 0 |
+| Tempo por rodada (30 perguntas) | ~53 s |
 
-## 🧰 Tecnologias utilizadas
+O caminho até aqui passou por uma **regressão para 76,7%**, causada por expor um parâmetro `ano`
+nas tools, e por um A/B de prompt que mostrou que o prompt não era a causa. Está tudo em
+[`evals/README.md`](evals/README.md), com os JSONs de cada rodada em `evals/resultados/`.
 
-* Python
-* Apache Spark
-* PySpark
-* Spark SQL
-* Pandas
-* Matplotlib
-* Requests
-* Google Colab
-* Portal de Dados Abertos do Recife
+> Esses números valem para **estes 30 casos**, escritos pelo autor. O guardrail de ano foi
+> criado depois de ver um caso falhar. Não é uma medida de confiabilidade geral.
 
----
+## 🔁 Feedback
 
-## 📚 Conceitos aplicados
+O CLI do agente pede 👍/👎 e grava em `app.interacoes`: pergunta, tools e argumentos, resposta,
+números sem suporte e voto. `python -m despesas.feedback` exporta os 👎 como **rascunho** em
+`evals/candidatos.yaml`. Eles **não** viram caso de eval automaticamente: alguém escreve o
+`gabarito_sql` e confere, porque gabarito gerado pelo sistema avaliado não prova nada.
 
-* ETL;
-* processamento distribuído;
-* limpeza e normalização de dados;
-* tipagem de dados;
-* agregações;
-* persistência de DataFrames;
-* validação de qualidade;
-* tratamento de falhas de integração;
-* visualização de dados;
-* exportação de resultados;
-* processamento híbrido com Spark e Pandas.
+## 🧪 Testes
 
----
+| Camada | O quê | Onde |
+|---|---|---|
+| Limpeza | valores BR, trim, tipos, receitas | `tests/test_limpeza.py` (PySpark) |
+| Dados | not_null, unique, chaves compostas, relacionamentos, reconciliação fato × staging, regras de negócio | `dbt/` (86 testes) |
+| API | valores calculados à mão num mini star schema, 404 de ano, busca | `tests/test_api.py` |
+| Agente | loop com LLM falso, tools do OpenAPI, detecção de número inventado, guardrail | `tests/test_agente.py` |
+| Evals | integridade dos casos, pontuação, cobertura da API no dado real | `tests/test_avaliacao.py`, `tests/test_cobertura_evals.py` |
+| Feedback | gravação e exportação de 👎 | `tests/test_feedback.py` |
 
-## ⚠️ Observações
+O CI (GitHub Actions) roda o pytest com Postgres a cada push. Os testes que dependem dos CSVs
+reais são pulados lá, porque os dados não vão pro repositório.
 
-* Os dados utilizados são públicos e disponibilizados pelo Portal de Dados Abertos da Prefeitura do Recife.
-* Os resultados representam o processamento do dataset de despesas orçamentárias de 2023.
-* O tempo de execução pode variar entre ambientes.
-* A indisponibilidade temporária do portal não representa falha do pipeline.
-* O notebook possui fallback para upload manual do dataset no Google Colab.
+## ⚠️ Limitações conhecidas
 
----
+- **Só 2023.** O agente deve recusar outros anos, e isso é testado nos evals.
+- **Granularidade mensal.** Não existe valor por dia.
+- **Dado oficial com inconsistências** em 6 empenhos, monitoradas como WARN
+  ([`docs/qualidade.md`](docs/qualidade.md)).
+- **Credores consolidados por nome:** duas empresas diferentes com razão social idêntica seriam
+  somadas. Não foi encontrado caso assim, mas também não existe CNPJ no dado pra provar.
+- **O modelo de 7B ignora metadados do contexto.** Ele respondeu com valor de 2023 uma pergunta
+  sobre 2022, mesmo com `anos_dos_dados: [2023]` na resposta. Por isso o guardrail é em código.
+  Outras alucinações de contexto, como confundir medidas, não têm guardrail.
+- **Em `PROMPT_VERSAO=v2`,** a regra sobre o parâmetro `ano` ficou obsoleta, porque o parâmetro saiu
+  das tools. O v2 é mantido só como registro do experimento. O padrão é o v1.
+- **O download dos CSVs é manual**, porque o portal bloqueia acesso automatizado.
 
-## 📄 Licença
+## 📚 Documentação
 
-Copyright © 2026 Davi Ramos Ferreira.
+- [`docs/schema.md`](docs/schema.md): camadas, grão, medidas e dimensões conformadas
+- [`docs/qualidade.md`](docs/qualidade.md): achados de qualidade e decisões
+- [`docs/v1-notebook.md`](docs/v1-notebook.md): README original da v1
 
-Todos os direitos reservados.
+## 🗂️ v1: notebook no Colab (métricas originais, preservadas)
+
+A primeira versão era um notebook PySpark no Colab ([`analise.ipynb`](analise.ipynb)). Métricas
+reportadas **por aquela versão**, mantidas como estavam:
+
+| Métrica | Resultado (v1) |
+| --- | ---: |
+| Registros processados | **127.119** |
+| Valor liquidado | **R$ 7.803.361.234,91** |
+| Percentual pago sobre o liquidado | **94,05%** |
+
+O ranking de órgãos da v1 agrupava por nome. A v2 agrupa por código de órgão, por isso os valores
+podem diferir levemente. Os números da v2 vêm da API e dos evals, e não substituem os da tabela
+acima.
 
 ---
 

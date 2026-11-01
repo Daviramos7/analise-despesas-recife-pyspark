@@ -107,3 +107,28 @@ def limpar(df_bruto: DataFrame) -> DataFrame:
         df = canonizar_nome(df, col_codigo, col_nome)
 
     return df
+
+
+# ---------------------------------------------------------------- receitas
+RECEITAS_COLUNAS_INTEIRAS = ["ano", "mes"]
+RECEITAS_COLUNAS_VALOR = [
+    "receita_prevista",
+    "receita_prevista_acrescimo",
+    "receita_prevista_atualizada",
+    "receita_arrecadada",
+]
+
+
+def limpar_receitas(df_bruto: DataFrame) -> DataFrame:
+    """Camada limpa das receitas orçamentárias.
+
+    Mesmas regras das despesas: trim, '' -> null, inteiros, valores BR -> decimal.
+    Valores são fluxos mensais (previsão inicial cai em janeiro, acréscimos nos
+    meses seguintes); negativos são deduções/estornos e NÃO são filtrados.
+    """
+    df = aparar_textos(df_bruto).drop("mes_nome")  # mes_nome é derivável de mes
+    for coluna in RECEITAS_COLUNAS_INTEIRAS:
+        df = df.withColumn(coluna, F.col(coluna).cast(IntegerType()))
+    for coluna in RECEITAS_COLUNAS_VALOR:
+        df = df.withColumn(coluna, valor_br_para_decimal(F.col(coluna)))
+    return df

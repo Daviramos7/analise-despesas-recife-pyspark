@@ -1,13 +1,30 @@
-"""Job bruto (CSV) -> limpo (Parquet particionado por mês)."""
+"""Job bruto (CSV) -> limpo (Parquet particionado por mês), para cada dataset."""
 import argparse
 import os
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from pyspark.sql import DataFrame, SparkSession
 
-from despesas.limpeza import limpar
+from despesas.limpeza import limpar, limpar_receitas
 
-CSV_PADRAO = "data/raw/despesas-orcamentarias-2023.csv"
-PARQUET_PADRAO = "data/clean/despesas"
+
+@dataclass(frozen=True)
+class Dataset:
+    csv: str
+    destino: str
+    limpeza: Callable[[DataFrame], DataFrame]
+    coluna_mes: str
+
+
+DATASETS = {
+    "despesas": Dataset(
+        "data/raw/despesas-orcamentarias-2023.csv", "data/clean/despesas", limpar, "mes_movimentacao"
+    ),
+    "receitas": Dataset(
+        "data/raw/receitas-orcamentarias-2023.csv", "data/clean/receitas", limpar_receitas, "mes"
+    ),
+}
 
 
 def criar_spark(app: str = "despesas-recife") -> SparkSession:
@@ -28,25 +45,22 @@ def ler_bruto(spark: SparkSession, caminho: str) -> DataFrame:
     )
 
 
-def executar(caminho_csv: str = CSV_PADRAO, destino: str = PARQUET_PADRAO) -> int:
-    spark = criar_spark()
+def executar(nome: str = "despesas", spark: SparkSession | None = None) -> int:
+    ds = DATASETS[nome]
+    proprio = spark is None
+    spark = spark or criar_spark()
     try:
-        limpo = limpar(ler_bruto(spark, caminho_csv))
-        (
-            limpo.write.mode("overwrite")
-            .partitionBy("mes_movimentacao")
-            .parquet(destino)
-        )
-        total = spark.read.parquet(destino).count()
-        print(f"[ingestao] {total} linhas gravadas em {destino}")
+        limpo = ds.limpeza(ler_bruto(spark, ds.csv))
+        limpo.write.mode("overwrite").partitionBy(ds.coluna_mes).parquet(ds.destino)
+        total = spark.read.parquet(ds.destino).count()
+        print(f"[ingestao] {nome}: {total} linhas gravadas em {ds.destino}")
         return total
     finally:
-        spark.stop()
+        if proprio:
+            spark.stop()
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--csv", default=CSV_PADRAO)
-    p.add_argument("--destino", default=PARQUET_PADRAO)
-    a = p.parse_args()
-    executar(a.csv, a.destino)
+    p.add_argument("dataset", choices=sorted(DATASETS), nargs="?", default="despesas")
+    executar(p.parse_args().dataset)

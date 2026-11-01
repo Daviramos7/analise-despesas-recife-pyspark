@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: despesas
+          POSTGRES_USER: despesas
+          POSTGRES_PASSWORD: despesas
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U despesas -d despesas"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGDATABASE: despesas
+      PGUSER: despesas
+      PGPASSWORD: despesas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/setup-java@v4    # PySpark 3.5 precisa de Java 8/11/17
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pip install -r requirements.txt
+      # Sem LLM e sem os CSVs: roda limpeza (Spark), API (fixture), agente (LLM falso),
+      # pontuação e feedback. Os testes de cobertura com dado real são pulados aqui.
+      - run: python -m pytest -q -rs
