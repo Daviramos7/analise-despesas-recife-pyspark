@@ -51,30 +51,68 @@ Portal de Dados Abertos (CSV despesas + receitas 2023)
 
 ## 🚀 Como rodar
 
-Pré-requisitos: Docker Desktop. Pra usar o agente sem custo, o [Ollama](https://ollama.com/download)
-com `ollama pull qwen2.5:7b`.
+### 1. Pré-requisitos
 
-1. Baixe os CSVs de **despesas** e **receitas orçamentárias 2023** no
-   [Portal de Dados Abertos do Recife](https://dados.recife.pe.gov.br) e salve em `data/raw/`
-   (`despesas-orcamentarias-2023.csv` e `receitas-orcamentarias-2023.csv`).
-2. Suba tudo:
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), instalado e **aberto**.
+- Para o agente, uma das opções:
+  - **[Ollama](https://ollama.com/download)** (grátis, local; GPU recomendada): `ollama pull qwen2.5:7b`
+  - **Groq** (grátis, na nuvem, sem GPU): chave em [console.groq.com](https://console.groq.com)
 
-```bash
-docker compose up --build api        # pipeline → dbt → API em http://localhost:8000/docs
-```
-
-3. Use:
+### 2. Código e dados
 
 ```bash
-docker compose run --rm agente       # conversa no terminal + 👍/👎
-docker compose run --rm evals        # roda os 30 casos e salva o relatório
-docker compose run --rm tests        # pytest
-python -m despesas.feedback          # exporta os 👎 para evals/candidatos.yaml
+git clone https://github.com/Daviramos7/analise-despesas-recife-pyspark.git
+cd analise-despesas-recife-pyspark
 ```
 
-**Trocar de LLM:** copie `.env.example` para `.env`. O padrão é Ollama local. Pra Groq (plano
-gratuito, modelo de 70B), descomente as linhas da opção 2. **A chave só existe no `.env`, que está
-no `.gitignore`.**
+Os CSVs **não** ficam no repositório. Baixe no
+[Portal de Dados Abertos do Recife](https://dados.recife.pe.gov.br) (busque "despesas
+orçamentárias" e "receitas orçamentárias", ano **2023**) e salve assim:
+
+```text
+data/raw/despesas-orcamentarias-2023.csv
+data/raw/receitas-orcamentarias-2023.csv
+```
+
+### 3. Subir pipeline + API (um comando)
+
+```bash
+docker compose up --build api
+```
+
+Isso roda PySpark → Postgres → dbt (com os testes de dados) e sobe a API. Na primeira vez leva
+uns 2 a 3 minutos. Está pronto quando aparecer `Uvicorn running on http://0.0.0.0:8000`.
+
+**Teste no navegador:** <http://localhost:8000/docs>. Clique num endpoint, depois em "Try it out" e "Execute".
+
+### 4. Usar (num segundo terminal, com a API no ar)
+
+| Quero… | Comando |
+|---|---|
+| Conversar com o agente (e dar 👍/👎) | `docker compose run --rm --build agente` |
+| Rodar os 30 casos de eval | `docker compose run --rm --build --no-deps evals` |
+| Medir variância (3 rodadas) | `docker compose run --rm --build --no-deps evals python evals/rodar.py --repeticoes 3` |
+| Rodar os testes | `docker compose run --rm --build tests` |
+| Exportar os 👎 para candidatos de eval | `docker compose run --rm --no-deps agente python -m despesas.feedback` |
+
+### 5. Trocar de LLM (opcional)
+
+```bash
+cp .env.example .env     # no Windows: copy .env.example .env
+```
+
+Edite o `.env`: o padrão é Ollama, e para usar Groq basta descomentar a opção 2 e colar a chave.
+**O `.env` está no `.gitignore`, então a chave nunca vai pro repositório.**
+
+### Problemas comuns
+
+| Sintoma | Causa | Solução |
+|---|---|---|
+| Testes rodam menos casos do que o esperado | o `run` reaproveitou uma imagem antiga | use `--build` nos comandos `run` |
+| Agente/evals: erro de conexão com o LLM | Ollama fechado ou escutando só em localhost | abra o Ollama; no Windows: `setx OLLAMA_HOST 0.0.0.0` e reinicie o Ollama |
+| `pipeline` falha logo no início | CSVs ausentes ou com nome diferente | confira os nomes em `data/raw/` |
+| Mudou código da API e nada mudou | o container da API é antigo | `docker compose up -d --build --no-deps api` |
+| Quer começar do zero | volume do Postgres com dados antigos | `docker compose down -v` |
 
 ## 🔌 API
 
